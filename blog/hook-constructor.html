@@ -1,0 +1,276 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Home | DD</title>
+
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/code-highlight.css" rel="stylesheet">
+<link href="/static/css/dexsite.css" rel="stylesheet">
+
+
+
+<meta name="description" content="Hooking a C++ constructors using another constructor, how difficult could it be? :-)">
+<meta name="author" content="Dexter Castor Döpping">
+<meta name="keywords" content="C++, Calling convention, x86, Game hacking, Assembly, Hooking, MinHook">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/index.html">DD</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-main">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a>
+        <li class="nav-item"><a class="nav-link" href="/about.html">About</a>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container mt-2">
+
+
+
+<article class="blog-post" lang="en">
+<h1>Hooking a C++ Constructor</h1>
+<div class="post-info" lang="en">
+    <span class="post-author"><strong>By</strong>: Dexter Castor Döpping</span>
+    <span class="post-publish-date"><strong>Published</strong>: 2022-11-12</span>
+</div>
+
+<blockquote>
+<p>NOTE: This post mentions injecting DLL's into a game. Doing this kind of stuff
+in single-player games for your own amusement is fun. In multiplayer games,
+where you might be harming other people's enjoyment, it is simply gross.
+Don't ruin someone's free time.</p>
+</blockquote>
+<p>I've been playing around with modding a game by injecting a DLL into the process and hooking native functions.
+Most C or C++ functions can be easily hooked:
+  write a new function that uses the same calling convention,
+  takes the same arguments,
+  and returns a compatible type.
+Install the hook using some library and you're basically done.</p>
+<p>However, C++ constructors are not that easy. What calling conventions do those use,
+does it return anything, and if so, what?</p>
+<h2>__thiscall</h2>
+<p>Constructors are basically member functions, and as such they use the <code>__thiscall</code> calling convention.
+The constructor must return the <code>this</code> pointer.</p>
+<p>VC++ does not allow you to specify the <code>__thiscall</code> calling convention on non-member functions, but that's pretty easy to work around.
+Write a class and add a member function to it. This member function can then be used to replace the original constructor.</p>
+<p>Imagine that our imaginary game uses the following class:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Player</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health_points</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">weapon_rank</span><span class="p">;</span><span class="w"></span>
+
+<span class="k">public</span><span class="o">:</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Constructor</span>
+<span class="w">    </span><span class="n">Player</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">health_points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">level</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">weapon_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">level</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// ... rest ...</span>
+<span class="p">};</span><span class="w"></span>
+</code></pre></div>
+<p>The health points and weapon rank correspond directly to the player's level.
+We want to have some fun and change this,
+so we hook the constructor by writing a compatible class in our DLL with a member function that mirrors the constructor's interface:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">HackedPlayer</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health_points</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">weapon_rank</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="nf">constructor</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">health_points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100'000'000</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">weapon_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">9001</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">install_hooks</span><span class="p">()</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">MH_CreateHook</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="mh">0x0059cf20</span><span class="p">,</span><span class="w"> </span><span class="c1">// We know the original constructor is located here</span>
+<span class="w">        </span><span class="n">memfn_voidp</span><span class="p">(</span><span class="o">&amp;</span><span class="n">HackedPlayer</span><span class="o">::</span><span class="n">constructor</span><span class="p">),</span><span class="w"></span>
+<span class="w">        </span><span class="k">nullptr</span><span class="w"></span>
+<span class="w">    </span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+<p>Now when we run the game, inject the DLL, and install our hooks,
+the player won't be initialised using its constructor,
+instead it will use our <code>HackedPlayer::constructor</code> method.
+We've changed the rules of the game 😎.</p>
+<h2>Problems..</h2>
+<p>The example I gave was very simplified. It actually works, but in most games classes are much more complicated than that.
+Imagine if the class contains a <code>std::string</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="w"> </span>class Player {<span class="w"></span>
+<span class="w"> </span>    int health_points;<span class="w"></span>
+<span class="w"> </span>    int weapon_rank;<span class="w"></span>
+<span class="gi">+    std::string name;</span><span class="w"></span>
+
+<span class="w"> </span>public:<span class="w"></span>
+<span class="w"> </span>    // Constructor<span class="w"></span>
+<span class="gi">+    Player(int level, std::string given_name)</span><span class="w"></span>
+<span class="w"> </span>    {<span class="w"></span>
+<span class="w"> </span>        health_points = 20 * level;<span class="w"></span>
+<span class="w"> </span>        weapon_rank = level;<span class="w"></span>
+<span class="gi">+        name = given_name;</span><span class="w"></span>
+<span class="w"> </span>    }<span class="w"></span>
+<span class="w"> </span>}<span class="w"></span>
+</code></pre></div>
+<p>We add the <code>std::string</code> to our <code>HackedPlayer</code> and assign to it just like the original constructor does:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">HackedPlayer</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health_points</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">weapon_rank</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">name</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">    </span><span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="nf">constructor</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">given_name</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">health_points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100'000'000</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">weapon_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">9001</span><span class="p">;</span><span class="w"></span>
+<span class="w">        </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">given_name</span><span class="p">;</span><span class="w">  </span><span class="c1">// We added this line, what could go wrong? :^)</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">};</span><span class="w"></span>
+</code></pre></div>
+<p>It appears like not much changed, but actually if you try this new example you'll find that the program now crashes!
+Somehow the function we replaced the constructor with is no longer compatible.
+What gives?</p>
+<p>The crash occurs at the <code>name = given_name</code> assignment.
+The problem is that <code>std::string</code>, unlike <code>int</code>, is a very complicated type.
+<code>std::string</code> manages a dynamic buffer of memory containing the text.
+During string assignment, a check is performed to see if the current buffer is large enough to hold the new text,
+if it is large enough the text is copied into the buffer, if it's too small, the current buffer is deallocated and 
+a new buffer is created that has the right size to hold the new text.</p>
+<p>None of this makes sense inside of <code>HackedPlayer::constructor</code>.
+The <code>name</code> variable isn't an actual <code>std::string</code> because no <code>std::string</code> has been constructed.
+Once we try to use the <code>std::string</code> assignment operator everything goes off the rails,
+it'll try to write into a buffer that doesn't exist, or deallocate it without it ever having been allocated.
+We're breaking the rules of C++ and sooner or later the program will crash.</p>
+<h2>What's in a name?</h2>
+<p>The reason why it works with the constructor, but doesn't work when we hook it is because
+the real constructor has some 'hidden' code that constructs the <code>name</code> member variable before the body of the constructor is run.
+Our hook doesn't do this because <strong>it's not a constructor</strong>, it's a member function that tries to act like one.</p>
+<p>There are several ways to solve this problem and I'm not going to present the easiest one (use placement <code>new</code> on the <code>std::string</code>).
+Instead I want to look at why we started by hooking a <em>constructor</em> using a <em>member function</em>,
+and how we might be able to use a real constructor instead.</p>
+<p>To hook a function using <code>MH_CreateHook</code> we must pass in a void pointer to the original function,
+in this case we hard-code the address,
+and we must pass in a void pointer to the replacement function.
+With normal functions this is pretty easy,
+but here we're using a member function (for the <code>__thiscall</code> calling convention)
+which makes it slightly more difficult.
+Unlike a free function, you can't cast a member function to <code>void*</code> directly,
+instead you must use a helper function such as <code>memfn_voidp</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span><span class="w"> </span><span class="nc">MemFn</span><span class="o">&gt;</span><span class="w"></span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">memfn_voidp</span><span class="p">(</span><span class="n">MemFn</span><span class="w"> </span><span class="n">memfn</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">void</span><span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">memfn</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+<p>This is just a trick you have to know about and use.
+I got this trick from a <a href="https://github.com/microsoft/Detours/blob/734ac64899c44933151c1335f6ef54a590219221/samples/member/member.cpp#L16-L19">comment in the Microsoft Detours library</a> :^).</p>
+<p>Alright, so it's slightly more difficult when you hook using a member functions opposed to a free function.
+What about using a constructor? Well.. it's pretty much impossible:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">MH_CreateHook</span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="mh">0x0059cf20</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">memfn_voidp</span><span class="p">(</span><span class="o">&amp;</span><span class="n">HackedPlayer</span><span class="o">::</span><span class="n">HackedPlayer</span><span class="p">),</span><span class="w"></span>
+<span class="w">    </span><span class="k">nullptr</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+<span class="c1">// Results in compiler error:</span>
+<span class="c1">// error C2277: 'HackedPlayer::{ctor}': cannot take address of this member function</span>
+</code></pre></div>
+<p>We can't refer to a constructor directly, it's not allowed by the C++ standard nor as a VC++ extension.
+So how can we workaround this restriction? We'll have to write a tiny bit of assembly.</p>
+<h2>Hook Shim</h2>
+<p>Here's where we're at:</p>
+<ul>
+<li>Using a free function isn't possible because we need the <code>__thiscall</code> calling convention</li>
+<li>The member function doesn't work because the <code>std::string</code> field doesn't get initialised</li>
+<li>A constructor would be a perfect match but we can not refer to it when creating the hook</li>
+</ul>
+<p>We must work around or break one of these rules.</p>
+<p>This is the plan:</p>
+<ul>
+<li>Write a free function that somehow handles the <code>__thiscall</code> calling convention</li>
+<li>Invoke the <code>HackedPlayer</code> constructor directly or indirectly</li>
+</ul>
+<p>Earlier I said that VC++ does not allow you to specify <code>__thiscall</code> on free functions,
+so how can we write a free function the 'handles' the <code>__thiscall</code> calling convention?
+We will need to write some assembly code, that way we are not held back by this VC++ restriction.
+I'm not all that familiar with writing assembly, so I want to make this as easy as possible for myself,
+the x86 assembly code should call back into C++ as soon as possible.</p>
+<p>Let's actually start with that C++ code:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="kr">__stdcall</span><span class="w"></span>
+<span class="n">construct_HackedPlayer</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">given_name</span><span class="p">)</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="n">HackedPlayer</span><span class="p">(</span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">given_name</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+<p>Pretty simple, we use placement <code>new</code> to immediately invoke the constructor.
+We return the <code>this</code> pointer which follows how the constructor is supposed to work,
+but wait! we're not using the right calling convention!
+We can't specify <code>__thiscall</code> but why are we specifying <code>__stdcall</code> instead?</p>
+<p>Well, <code>__thiscall</code> and <code>__stdcall</code> are quite similar.
+The only difference is that the <code>this</code>/self pointer is passed via the <code>ecx</code> register with <code>__thiscall</code>
+but on top of the stack with <code>__stdcall</code>.
+This means that our assembly code (which will be invoked using the <code>__thiscall</code> convention)
+only has to convert the call into <code>__stdcall</code> and invoke this C++ function.</p>
+<p>We do this by putting the <code>ecx</code> register onto the stack, being careful to preserve the return address:</p>
+<div class="codehilite"><pre><span></span><code><span class="kr">__declspec</span><span class="p">(</span><span class="kr">naked</span><span class="p">)</span><span class="w"></span>
+<span class="kr">__declspec</span><span class="p">(</span><span class="n">noinline</span><span class="p">)</span><span class="w"></span>
+<span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="n">thiscall_shim</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">given_name</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span><span class="w"></span>
+<span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kr">__asm</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">xchg</span><span class="w"> </span><span class="n">ecx</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">esp</span><span class="p">]</span><span class="w"></span>
+<span class="w">        </span><span class="n">push</span><span class="w"> </span><span class="n">ecx</span><span class="w"></span>
+<span class="w">        </span><span class="n">jmp</span><span class="w"> </span><span class="n">construct_HackedPlayer</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+<p>Now we install this shim, and hopefully everything works:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">MH_CreateHook</span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="mh">0x0059cf20</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="n">thiscall_shim</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">nullptr</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div>
+<p>And yes, it works! Despite being at level one,
+I have one hundred million health points and a weapon rank over 9000!</p>
+<p>I'm happy I was able to figure this out,
+it took some time but I now have a solution that should work for any constructor,
+no matter how many or what kind of argument it takes.
+There are easier ways to solve this problem,
+but for my use-case I really wanted a matching real constructor in my DLL,
+not a member function with a bunch of extra stuff added into it so that it emulates one.</p>
+</article>
+
+
+
+</main>
+
+<footer class="py-3 my-4">
+  <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+    <li class="nav-item"><a href="/index.html" class="nav-link px-2 text-muted">Home</a></li>
+    <li class="nav-item"><a href="/about.html" class="nav-link px-2 text-muted">About</a></li>
+  </ul>
+  <p class="text-center text-muted">Dexter Castor Döpping</p>
+</footer>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

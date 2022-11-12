@@ -1,0 +1,100 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Home | DD</title>
+
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/code-highlight.css" rel="stylesheet">
+<link href="/static/css/dexsite.css" rel="stylesheet">
+
+
+
+<meta name="description" content="How I managed to decrypt Noita&#39;s game files and get in the credits.">
+<meta name="author" content="Dexter Castor Döpping">
+<meta name="keywords" content="x86, Game hacking, Assembly">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/index.html">DD</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-main">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a>
+        <li class="nav-item"><a class="nav-link" href="/about.html">About</a>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container mt-2">
+
+
+
+<article class="blog-post" lang="en">
+<h1>Decrypting Noita&#39;s files</h1>
+<div class="post-info" lang="en">
+    <span class="post-author"><strong>By</strong>: Dexter Castor Döpping</span>
+    <span class="post-publish-date"><strong>Published</strong>: 2020-09-18</span>
+</div>
+
+<p>After I got my hands on a game called Noita I couldn't help but get curious about how the game was implemented, so naturally I tried to take a look at its files.. But most interesting files were hidden away inside of a file named "data.wak". How could I gain access to these files?</p>
+<h2>Discovery</h2>
+<p>I tried to see if it was some kind of known file format by using the <code>file</code> tool inside of Linux. This tool contains a database of known file formats and will immediately give an indication of what the file-type of any file could be. But in this case <code>file</code> only gave the nondescript description 'data'.</p>
+<p>This meant that it wasn't a known file format.. The next step was to analyse the file with <code>ent</code>, this tool measures the entropy of the file, in this case it told me that the entropy of the file was 7.999 bits per byte, this means that the file contained no detectable redundancy. That indicates that the file is either encrypted, compressed or both.</p>
+<h2>Misstep</h2>
+<p>Inside of the accessible game files there was a folder named licenses, after looking through it I found out that Noita used a compression library called "fastlz". I spent a lot of time trying to use this library to decompress the .wak file, with no success.</p>
+<p>I decided to take a closer look at what the game was actually doing with the file data instead of trying things on a hunch.</p>
+<h2>Ghidra and GDB</h2>
+<p>My next step was to look at what the code was actually doing, for this I used Ghidra to look a the disassembled and decompiled code. With this I created theories about how the code worked.</p>
+<p>To find out what code I needed to look at I used GDB to set breakpoints on standard Linux file loading functions. This way I eventually found out what code dealt with loading "data.wak".</p>
+<p>After a lot of trail and error I found the exact point at which the file names got loaded from "data.wak". This was a great milestone for me, so I took a picture 😁.</p>
+<p><img alt="Output of GDB where the same breakpoint gets hit multiple times.
+file names such as materials.xml are printed to the console.
+" src="/static/img/noita_data_wak_gdb.jpg"/></p>
+<p>The file name secrets_secrets_secrets.png piqued my interest and kept me motivated!</p>
+<p>After more experimentation I found out where the file contents got loaded, I also discovered the file's contents was loaded in-place of the unreadable version. This meant that unreadable and readable version of these files are the exact same size, so that rules out compression, it's only encrypted.</p>
+<h2>Misstep 2: Reimplementing AES by looking at assembly code</h2>
+<p>Noita used standard AES encryption.. I do not have enough experience with this kind of stuff to recognise that, so instead I went through the long and painful process of recreating the AES algorithm by looking at the disassembly/decompiled code in Ghidra &amp; GDB.</p>
+<p>This took a while, but eventually I managed to extract all files from "data.wak". Success!
+Secrets Secrets Secrets!</p>
+<p>So what was the contents of secrets_secrets_secrets.png? Here it is:</p>
+<p><img alt="Green text with a black background.
+The text is: &quot;Look at you, hacker, aren't you a clever one? We're really impressed.
+Congrats! You now have access to all our secrets and while we cannot stop you,
+maybe we can make a little deal? You can leak all the information if you want to.
+or if you wait till 11.10.2019 before releasing them we will put you in the credits of the game.&quot;
+" src="/static/img/secrets_secrets_secrets.jpg"/></p>
+<p>This was a very cool surprise . After sending a couple emails and waiting a bit I got to see my name in the credits of the game!</p>
+<p>A list of names under the section "Cryptic Highscores". A red arrow points at number 15 with the name Dexter Castor Döpping</p>
+<p>I'm very proud of this accomplishment, I didn't have any reverse engineering experience so it took a lot of time and effort.</p>
+<p>You can checkout the code I wrote to extract all of the files here: https://github.com/dextercd/Noita-Wak-Extractor/blob/master/src/enc.cpp</p>
+<p>I hope this was interesting to you! :-)</p>
+</article>
+
+
+
+</main>
+
+<footer class="py-3 my-4">
+  <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+    <li class="nav-item"><a href="/index.html" class="nav-link px-2 text-muted">Home</a></li>
+    <li class="nav-item"><a href="/about.html" class="nav-link px-2 text-muted">About</a></li>
+  </ul>
+  <p class="text-center text-muted">Dexter Castor Döpping</p>
+</footer>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
