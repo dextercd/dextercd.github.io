@@ -6,7 +6,7 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Home | DD</title>
+<title>Hooking a C++ Constructor | DD</title>
 
 <link href="/static/css/bootstrap.min.css" rel="stylesheet">
 <link href="/static/css/code-highlight.css" rel="stylesheet">
@@ -146,7 +146,7 @@ Imagine if the class contains a <code>std::string</code>:</p>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="p">};</span><span class="w"></span>
 </code></pre></div>
-<p>It appears like not much changed, but actually if you try this new example you'll find that the program now crashes!
+<p>It appears like not much changed, but actually, if you try this new example you'll find that the program now crashes!
 Somehow the function we replaced the constructor with is no longer compatible.
 What gives?</p>
 <p>The crash occurs at the <code>name = given_name</code> assignment.
@@ -161,7 +161,7 @@ Once we try to use the <code>std::string</code> assignment operator everything g
 it'll try to write into a buffer that doesn't exist, or deallocate it without it ever having been allocated.
 We're breaking the rules of C++ and sooner or later the program will crash.</p>
 <h2>What's in a name?</h2>
-<p>The reason why it works with the constructor, but doesn't work when we hook it is because
+<p>The reason why it works with the constructor but doesn't work when we hook it is because
 the real constructor has some 'hidden' code that constructs the <code>name</code> member variable before the body of the constructor is run.
 Our hook doesn't do this because <strong>it's not a constructor</strong>, it's a member function that tries to act like one.</p>
 <p>There are several ways to solve this problem and I'm not going to present the easiest one (use placement <code>new</code> on the <code>std::string</code>).
