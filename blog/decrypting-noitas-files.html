@@ -49,13 +49,13 @@
 </div>
 
 <p>After I got my hands on a game called Noita I couldn't help but get curious about how the game was implemented, so naturally I tried to take a look at its files.. But most interesting files were hidden away inside of a file named "data.wak". How could I gain access to these files?</p>
-<h2>Discovery</h2>
+<h2 id="discovery">Discovery</h2>
 <p>I tried to see if it was some kind of known file format by using the <code>file</code> tool inside of Linux. This tool contains a database of known file formats and will immediately give an indication of what the file-type of any file could be. But in this case <code>file</code> only gave the nondescript description 'data'.</p>
 <p>This meant that it wasn't a known file format.. The next step was to analyse the file with <code>ent</code>, this tool measures the entropy of the file, in this case it told me that the entropy of the file was 7.999 bits per byte, this means that the file contained no detectable redundancy. That indicates that the file is either encrypted, compressed or both.</p>
-<h2>Misstep</h2>
+<h2 id="misstep">Misstep</h2>
 <p>Inside of the accessible game files there was a folder named licenses, after looking through it I found out that Noita used a compression library called "fastlz". I spent a lot of time trying to use this library to decompress the .wak file, with no success.</p>
 <p>I decided to take a closer look at what the game was actually doing with the file data instead of trying things on a hunch.</p>
-<h2>Ghidra and GDB</h2>
+<h2 id="ghidra-and-gdb">Ghidra and GDB</h2>
 <p>My next step was to look at what the code was actually doing, for this I used Ghidra to look a the disassembled and decompiled code. With this I created theories about how the code worked.</p>
 <p>To find out what code I needed to look at I used GDB to set breakpoints on standard Linux file loading functions. This way I eventually found out what code dealt with loading "data.wak".</p>
 <p>After a lot of trail and error I found the exact point at which the file names got loaded from "data.wak". This was a great milestone for me, so I took a picture 😁.</p>
@@ -64,7 +64,7 @@ file names such as materials.xml are printed to the console.
 " src="/static/img/noita_data_wak_gdb.jpg"/></p>
 <p>The file name secrets_secrets_secrets.png piqued my interest and kept me motivated!</p>
 <p>After more experimentation I found out where the file contents got loaded, I also discovered the file's contents was loaded in-place of the unreadable version. This meant that unreadable and readable version of these files are the exact same size, so that rules out compression, it's only encrypted.</p>
-<h2>Misstep 2: Reimplementing AES by looking at assembly code</h2>
+<h2 id="misstep-2-reimplementing-aes-by-looking-at-assembly-code">Misstep 2: Reimplementing AES by looking at assembly code</h2>
 <p>Noita used standard AES encryption.. I do not have enough experience with this kind of stuff to recognise that, so instead I went through the long and painful process of recreating the AES algorithm by looking at the disassembly/decompiled code in Ghidra &amp; GDB.</p>
 <p>This took a while, but eventually I managed to extract all files from "data.wak". Success!
 Secrets Secrets Secrets!</p>

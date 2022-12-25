@@ -62,7 +62,7 @@ Most C or C++ functions can be easily hooked:
 Install the hook using some library and you're basically done.</p>
 <p>However, C++ constructors are not that easy. What calling conventions do those use,
 does it return anything, and if so, what?</p>
-<h2>__thiscall</h2>
+<h2 id="__thiscall">__thiscall</h2>
 <p>Constructors are basically member functions, and as such they use the <code>__thiscall</code> calling convention.
 The constructor must return the <code>this</code> pointer.</p>
 <p>VC++ does not allow you to specify the <code>__thiscall</code> calling convention on non-member functions, but that's pretty easy to work around.
@@ -112,7 +112,7 @@ so we hook the constructor by writing a compatible class in our DLL with a membe
 the player won't be initialised using its constructor,
 instead it will use our <code>HackedPlayer::constructor</code> method.
 We've changed the rules of the game 😎.</p>
-<h2>Problems..</h2>
+<h2 id="problems">Problems..</h2>
 <p>The example I gave was very simplified. It actually works, but in most games classes are much more complicated than that.
 Imagine if the class contains a <code>std::string</code>:</p>
 <div class="codehilite"><pre><span></span><code><span class="w"> </span>class Player {<span class="w"></span>
@@ -160,7 +160,7 @@ The <code>name</code> variable isn't an actual <code>std::string</code> because 
 Once we try to use the <code>std::string</code> assignment operator everything goes off the rails,
 it'll try to write into a buffer that doesn't exist, or deallocate it without it ever having been allocated.
 We're breaking the rules of C++ and sooner or later the program will crash.</p>
-<h2>What's in a name?</h2>
+<h2 id="whats-in-a-name">What's in a name?</h2>
 <p>The reason why it works with the constructor but doesn't work when we hook it is because
 the real constructor has some 'hidden' code that constructs the <code>name</code> member variable before the body of the constructor is run.
 Our hook doesn't do this because <strong>it's not a constructor</strong>, it's a member function that tries to act like one.</p>
@@ -195,7 +195,7 @@ What about using a constructor? Well.. it's pretty much impossible:</p>
 </code></pre></div>
 <p>We can't refer to a constructor directly, it's not allowed by the C++ standard nor as a VC++ extension.
 So how can we workaround this restriction? We'll have to write a tiny bit of assembly.</p>
-<h2>Hook Shim</h2>
+<h2 id="hook-shim">Hook Shim</h2>
 <p>Here's where we're at:</p>
 <ul>
 <li>Using a free function isn't possible because we need the <code>__thiscall</code> calling convention</li>
