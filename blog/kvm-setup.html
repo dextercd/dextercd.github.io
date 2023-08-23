@@ -1,0 +1,171 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Using a KVM for Work From Home | DD</title>
+
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/code-highlight.css" rel="stylesheet">
+<link href="/static/css/dexsite.css" rel="stylesheet">
+
+
+
+<meta name="description" content="Improving my work from home setup using a KVM switch/hub.">
+<meta name="author" content="Dexter Castor Döpping">
+<meta name="keywords" content="WFH, Setup, Hardware, USB-C">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/index.html">DD</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-main">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a>
+        <li class="nav-item"><a class="nav-link" href="/about.html">About</a>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container mt-2">
+
+
+
+<article class="blog-post" lang="en">
+<h1>Using a KVM for Work From Home</h1>
+<div class="post-info" lang="en">
+    <span class="post-info-item"><strong>By</strong>: Dexter Castor Döpping</span>
+    <span class="post-info-item"><strong>Published</strong>: 2023-08-24</span>
+</div>
+
+<h2 id="existing-setup">Existing setup</h2>
+<p>For a long time my work from home setup was literally just using my work laptop on the corner of my desk.
+A single screen, touchpad for moving the cursor, built-in keyboard, aaaand that's about it.
+I'd work like that while two screens are right there, behind the laptop, turned off.
+Maybe a bit silly, but the idea of changing out cables every day just sounded super inconvenient to me.</p>
+<p>I stopped playing on my piano after it got damaged (by my lovely cat).
+After getting rid of I had a lot more desk space to play with.
+So after more than two years of working like a weirdo minimalist, I finally started improving my WFH setup.</p>
+<p>The work laptop was now on the center of my desk and connected to my keyboard, mouse, and one additional screen using a DisplayPort USB-C adapter.
+This already made work more enjoyable, but switching my keyboard and mouse between my work laptop and personal computer very quickly became annoying.
+I also wasn't able to connect a second screen because the screen has a single digital out.
+I definitely wasn't going to crawl under my desk twice a day to swap it between my PC/laptop.</p>
+<p>So already these changes were good, but:</p>
+<ul>
+<li>I wanted switching between PC/work laptop to be convenient,</li>
+<li>and I'd like to connect an additional screen.</li>
+</ul>
+<p>I wasn't sure these devices existed at first but I began looking for KVM switch/USB-C hub boxes.</p>
+<h2 id="kvm">KVM</h2>
+<p>Thankfully, these devices do exist.
+You connect USB devices and displays into a single box and this combines it into a signal traveling over a single USB-C cable.
+That sounds like a simple hub but this actually has <em>two</em> USB-C cables that go to two different computers.
+With the push of a single button the signal is switched from one device to the other.</p>
+<p>This sounds great, but unfortunately USB-C is not that simple.</p>
+<p>I was sure the laptop would be fine with it, but what about the desktop PC..
+Can it receive video over USB-C?</p>
+<p>I didn't think so, and after a bit of research I understood I needed some kind of expansion card.</p>
+<h2 id="usb-c-displayport-alternate-mode">USB-C DisplayPort Alternate Mode</h2>
+<p>Right, so the KVM I'm looking at uses "DP Alt Mode" to send video, what does that mean?</p>
+<p>Apparently USB-C allows other protocols to travel over the same wire.
+This is how USB-C supports Thunderbolt and DisplayPort data.</p>
+<p>Now most GPU's don't have a USB-C port, and while Linux "supports" USB-C alternate mode,
+it's not clear what this support means exactly.
+It didn't look like it would magically make the GPU see a screen that is connected over USB-C to the motherboard.</p>
+<p>All hope was lost until I learned about this cool expansion card from
+<a href="https://dancharblog.wordpress.com/2020/07/20/add-usb-c-with-dp-alt-mode-to-your-desktop-pc/">this website</a>:</p>
+<p><img alt="Diagram of a computer with a DisplayPort cable connected to itself.
+On one end is a PCIe card which also has a USB-C input.
+On the other end is the video input of the computer.
+" src="/static/img/dp_alt_mode_pcie_card.jpg"/></p>
+<p><a href="https://www.delock.de/produkt/89582/merkmale.html">https://www.delock.de/produkt/89582/merkmale.html</a></p>
+<p>I don't really know how the device works and I'm not sure whether it depends on
+any operating system support, but this is a USB-C interface card that can
+combine a DisplayPort signal into USB-C using DP Alt mode.</p>
+<p>You have to connect a DisplayPort cable from the PCIe card to the GPU, which looks a little unusual but makes sense.</p>
+<p>This is great, and unlike 99.99999% of hardware it advertises Linux support, so
+it's guaranteed to work perfectly, right? :-)</p>
+<p>Well, I wasn't too sure, so I first ordered the PCIe card to test before getting the KVM.
+To my surprise, it worked exactly like it should.
+The model I bought came with a single, short mounting bracket which didn't fit my PC.
+After bending some of the bracket and cutting up one of the case's slot covers, I was able to get a sturdy mount.</p>
+<h2 id="vt2900">VT2900</h2>
+<p>I settled on the VisionTek VT2900 KVM. This has pretty much all the features I needed and not much more.
+HDMI and DP out, can switch between two computers, and it has a couple USB slots for keyboard and mouse.
+It can even deliver 100W of power to one of the connected computers.</p>
+<p>Because the KVM doesn't support high refresh rates or resolution when multiple screens are connected,
+I decided to try to connect my main screen directly to my PC and only have the secondary screen go through the KVM.
+For work I don't care as much about resolution/refresh rate, so both screens are connected through the KVM to the laptop.</p>
+<p>Here's a perfect diagram that may not be criticised:</p>
+<p><img alt="Diagram showing how several devices are wired up to a KVM.
+The screen on the left is connected to the computer and the KVM while the screen on the right is only connected to the KVM.
+The KVM is connected to two screens, a desktop computer, a laptop, a wireless mouse dongle, and a keyboard." src="/static/img/kvm_setup.png"/></p>
+<h3 id="oh-no">Oh no</h3>
+<p>The KVM finally arrived and I started playing with it.
+At first, everything appeared to work fine, but soon I began experiencing problems.</p>
+<p>On the laptop there were no issues, but on my PC the screen connected through the KVM would turn black for a couple seconds at a time.
+Sometimes there would be a couple minutes between this happening, other times it would happen constantly.</p>
+<p>At first I didn't know what caused this. I tried a lot of stuff to diagnose/fix it:</p>
+<ol>
+<li>Trying a couple different cables,</li>
+<li>Switching ports on the KVM (this seemed to help at first but then it broke again),</li>
+<li>Installing Windows on my PC (the horror)<ol>
+<li>To see if the issue was Linux specific (it wasn't)</li>
+<li>To try to update my GPU's BIOS (it already was up to date)</li>
+</ol>
+</li>
+<li>Lowering the resolution of the screen,</li>
+<li>Disconnecting/turning off almost everything except the screen from the KVM.</li>
+</ol>
+<p>Most of these things made little difference.
+Finally, I concluded it was probably the cable for these reasons:</p>
+<ol>
+<li>It mostly appeared to be independent of the ports on the KVM,</li>
+<li>Using different USB-C cables made things much worse or slightly better,</li>
+<li>Someone turning on the lights in the room behind the computer caused the display to turn black about 50% of the time.</li>
+</ol>
+<p>Yeahh... that last one surprised me. I had a hunch after it happened a couple times,
+and after testing, I was able to make it happen consistently.
+I guess electrical interference causes the data to be corrupted.
+I knew this kind of stuff was possible, but personally never experienced something like this before.</p>
+<p>Sure enough, getting new high quality USB-C cables solved all problems. 🎉</p>
+<p>It's a bit frustrating that the included cables didn't work properly.
+Maybe I got a bad batch of cables or the interference is especially bad here.</p>
+<p>TODO: investigate electric ghosts.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Anyhow, it's working now and I'm happy.</p>
+<p>I feel silly for not doing this sooner.
+I know multiple screens make things more manageable, but somehow I convinced myself that it wasn't necessary.
+Probably I didn't want to get rid of the piano on my desk, which meant there wasn't space for this setup.
+I'm glad the piano is gone now, since it was apparently also causing some of my hand pain. Guess I can thank my cat for this :^).</p>
+<p><img alt="Photo of two monitors connected to a laptop.
+There's a wireless mouse and a keyboard with a wire that goes to a box underneath the left monitor.
+The laptop has a wire going to this same box." src="/static/img/kvm_setup_irl.jpg"/></p>
+</article>
+
+
+
+</main>
+
+<footer class="py-3 my-4">
+  <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+    <li class="nav-item"><a href="/index.html" class="nav-link px-2 text-muted">Home</a></li>
+    <li class="nav-item"><a href="/about.html" class="nav-link px-2 text-muted">About</a></li>
+  </ul>
+  <p class="text-center text-muted">Dexter Castor Döpping</p>
+</footer>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
