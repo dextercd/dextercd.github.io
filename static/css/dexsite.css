@@ -6,12 +6,16 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
-
-    font-size: 1.4rem;
 }
 
 main {
     flex-grow: 1;
+}
+
+@media (min-width: 768px) {
+    body {
+        font-size: 1.4rem;
+    }
 }
 
 .blog-post blockquote {
