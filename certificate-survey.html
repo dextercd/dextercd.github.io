@@ -1,0 +1,368 @@
+<!doctype html>
+<title>Report</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/dc@4.2.7/dist/style/dc.css">
+<style>
+:root {
+  font-family: sans-serif;
+}
+*, *:after, *:before {
+  box-sizing: border-box;
+}
+
+.dc-chart {
+    overflow: scroll;
+}
+
+.dc-chart .pie-slice {
+  fill: #000;
+}
+
+.chart-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 1159px) {
+    .chart-list {
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+.widget-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.number-widget {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  height: 8em;
+  width: 200px;
+  align-items: center;
+  text-align: center;
+
+  background-color: #eee;
+  border-radius: 7px;
+}
+
+.number-widget > .dc-chart {
+  font-size: 3rem;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+}
+</style>
+
+<body>
+
+<nav><a href="/">Home</a></nav>
+
+<h1>Certificate Survey</h1>
+
+<div id="data-count" style="padding: 10px 0px"></div>
+
+<div class="chart-list">
+  <div id="leChart"><p>Let's Encrypt Usage</p></div>
+  <div id="ssChart"><p>Self-signed Usage</p></div>
+  <div class="widget-list">
+    <div id="total-widget" class="number-widget">
+      <span>Total</span>
+      <div id="total"></div>
+      <span>Certificates</span>
+    </div>
+    <div id="ocsp-widget" class="number-widget">
+      <span>OCSP Must-Staple</span>
+      <div id="ocsp"></div>
+      <span>Certificates</span>
+    </div>
+  </div>
+
+  <div id="signature-type"></div>
+
+  <div class="widget-list">
+    <div class="number-widget">
+      <span>Max</span>
+      <div id="san-max"></div>
+      <span>SAN Count</span>
+    </div>
+    <div class="number-widget">
+      <span>Average</span>
+      <div id="san-avg"></div>
+      <span>SAN Count</span>
+    </div>
+  </div>
+</div>
+
+<div class="chart-list">
+  <div id="pubkey"></div>
+  <div id="validity"></div>
+</div>
+
+<h2>Terms:</h2>
+
+<div>
+<p><strong>OCSP Must-Staple</strong>:
+Servers using certificates with this flag must provide proof to the client that the certificate hasn't been revoked.</p>
+
+<p>
+This extension is meant to ensure that attackers that gained access to the private
+key can't keep using the certificate after it's been revoked,
+as clients should report an error if they don't get the revocation status from the server.
+</p>
+
+<p>
+This flag can be good because clients don't always go out of their way to check revocation status themselves.
+The downside of this flag is that it can cause your service to become inaccessible if the server has issues retrieving the revocation status.
+</p>
+</div>
+
+<hr>
+<div>
+<p><strong>SAN</strong>: Subject alternative name.
+This extension is used to list the names that are associated with the certificate.
+Most SAN entries are domain names, but IPs, email addresses, and other stuff can also appear here.
+</p>
+
+<p>
+The visualisation shows the maximum number of entries a certificate has and the average number for the current selection.
+People go pretty wild with sometimes hundreds of domains in one certificate.</p>
+</div>
+
+<h2>Data:</h2>
+
+The list of websites that I downloaded all the certificates from came from
+<a href="https://www.domcop.com/openpagerank/what-is-openpagerank">Open PageRank</a>.
+
+<script src="https://unpkg.com/d3@5.16.0/dist/d3.js"></script>
+<script src="https://unpkg.com/crossfilter2@1.4.8/crossfilter.js"></script>
+<script src="https://unpkg.com/dc@4.2.7/dist/dc.js"></script>
+
+<script>
+const certRows = {"columns":["signature_alg","public_key_detail","ocsp_must_staple","le","valid_bin","self_signed","count","expired","avg_san_count","max_san_count","valid_max","valid_min","valid_avg"],"data":[["RSA-SHA256","RSA-2048",false,true,80,false,356864,3583,4.0944477448,100,7,7,7],["RSA-SHA256","RSA-2048",false,false,380,false,142086,1687,6.4058035274,458,34,32,34],["RSA-SHA256","RSA-2048",false,false,80,false,121319,1040,5.1664454867,1000,8,6,7],["RSA-SHA256","RSA-2048",false,false,360,false,85763,2569,6.4965078181,630,32,31,31],["EC-SHA384","EC-secp256r1",false,true,80,false,66841,0,1.8377642465,50,7,7,7],["RSA-SHA256","RSA-4096",false,true,80,false,46686,767,9.883284068,100,7,7,7],["RSA-SHA256","EC-secp256r1",false,true,80,false,44545,225,14.1246604557,100,7,7,7],["EC-SHA256","EC-secp256r1",false,false,360,false,22618,5,2.6245910337,250,32,31,31],["RSA-SHA256","EC-secp384r1",false,true,80,false,13648,191,3.0276963658,100,7,7,7],["RSA-SHA384","RSA-2048",false,false,360,false,11023,126,14.4965073029,545,32,31,31],["RSA-SHA256","RSA-4096",false,false,360,false,8871,217,5.1652575809,262,32,31,31],["RSA-SHA256","EC-secp256r1",false,false,80,false,8668,1,80.3652514998,590,8,6,7],["RSA-SHA256","RSA-4096",false,false,380,false,8570,171,4.1282380397,694,34,32,34],["RSA-SHA256","RSA-2048",false,false,360,true,5849,4941,4.7837237135,45,31,31,31],["RSA-SHA256","RSA-2048",false,false,180,false,5770,14,34.4362218371,428,17,15,15],["RSA-SHA256","RSA-3072",false,true,80,false,5224,102,7.5765696784,100,7,7,7],["RSA-SHA256","EC-secp256r1",false,false,360,false,3565,9,22.9640953717,154,32,31,31],["RSA-SHA256","RSA-2048",false,false,340,false,3557,53,11.9187517571,423,31,29,30],["RSA-SHA384","RSA-2048",false,false,380,false,3300,2,12.8624242424,420,34,32,34],["RSA-SHA384","RSA-4096",false,false,360,false,3048,17,28.7050524934,785,32,31,31],["EC-SHA256","EC-secp256r1",false,false,320,false,2883,0,2.0541103018,49,29,27,28],["RSA-SHA256","RSA-4096",false,false,3640,true,2328,0,0.0090206186,2,315,315,315],["EC-SHA256","EC-secp256r1",false,false,380,false,2313,2,3.3571119758,96,34,32,34],["RSA-SHA384","RSA-2048",false,false,80,false,2289,185,4.4442988204,100,8,6,7],["EC-SHA256","EC-secp256r1",false,false,300,false,2070,0,1.9405797101,37,27,25,26],["RSA-SHA256","RSA-2048",false,false,5460,true,1697,0,0.0,0,473,473,473],["RSA-SHA256","EC-secp256r1",false,false,380,false,1608,4,19.2599502488,478,34,32,34],["EC-SHA256","EC-secp256r1",false,false,340,false,1552,0,2.2332474227,46,31,29,30],["RSA-SHA256","RSA-2048",false,false,320,false,1480,56,16.2533783784,245,29,27,28],["RSA-SHA256","RSA-2048",false,false,3640,true,1454,3,0.8115543329,126,315,315,315],["RSA-SHA256","RSA-2048",false,false,260,false,869,15,29.6409666283,254,24,22,23],["EC-SHA384","EC-secp256r1",false,false,360,false,850,1,36.6705882353,94,32,31,31],["EC-SHA384","EC-secp256r1",false,false,80,false,831,7,2.1155234657,47,8,7,7],["EC-SHA384","RSA-2048",false,false,360,false,790,0,1.9721518987,14,32,31,31],["EC-SHA384","EC-secp256r1",false,false,380,false,740,0,17.2108108108,121,34,32,34],["EC-SHA256","EC-secp256r1",false,false,280,false,698,0,1.6561604585,10,25,24,25],["RSA-SHA256","RSA-2048",false,false,300,false,690,27,30.484057971,304,27,25,26],["RSA-SHA384","RSA-4096",false,false,80,false,645,5,2.0604651163,36,7,7,7],["RSA-SHA256","RSA-4096",false,false,10000,true,507,0,0.0,0,864,864,864],["RSA-SHA256","RSA-2048",false,false,20,false,496,12,8.1774193548,199,3,1,2],["RSA-SHA384","EC-secp256r1",false,false,380,false,484,0,1.1363636364,19,34,32,34],["RSA-SHA256","RSA-2048",false,false,720,false,443,434,3.223476298,39,63,62,63],["EC-SHA256","EC-secp384r1",false,false,360,false,441,3,19.0408163265,615,32,31,31],["RSA-SHA256","RSA-2048",false,false,220,false,424,9,46.4363207547,203,20,19,19],["RSA-SHA384","RSA-4096",false,false,380,false,392,1,10.7193877551,136,34,32,34],["RSA-SHA256","RSA-2048",false,false,160,false,383,3,52.8981723238,395,15,13,14],["RSA-SHA256","RSA-2048",true,true,80,false,357,0,2.9523809524,28,7,7,7],["RSA-SHA256","RSA-2048",false,false,280,false,354,15,25.1553672316,288,25,24,25],["RSA-SHA256","EC-secp256r1",false,false,140,false,321,0,65.691588785,100,13,12,12],["RSA-SHA256","RSA-2048",false,false,780,false,302,302,38.5463576159,406,69,67,68],["RSA-SHA384","RSA-3072",false,false,360,false,302,4,58.4536423841,508,31,31,31],["RSA-SHA256","RSA-2048",false,false,200,false,296,10,55.0033783784,323,19,17,18],["RSA-SHA1","RSA-2048",false,false,360,true,289,284,0.0726643599,3,32,31,31],["RSA-SHA256","RSA-2048",false,false,240,false,283,9,42.9081272085,250,22,20,21],["RSA-SHA256","RSA-2048",false,false,10000,true,271,0,0.0036900369,1,864,864,864],["RSA-SHA256","RSA-4096",false,false,340,false,262,4,8.393129771,184,31,29,30],["RSA-SHA256","RSA-2048",false,false,140,false,257,10,92.5914396887,396,13,12,13],["RSA-SHA256","EC-secp256r1",false,false,160,false,248,0,62.1935483871,96,15,14,15],["RSA-SHA1","RSA-2048",false,false,3640,true,215,93,0.111627907,2,315,315,315],["RSA-SHA256","RSA-4096",true,true,80,false,208,12,5.7980769231,58,7,7,7],["EC-SHA256","EC-secp384r1",false,false,380,false,207,0,3.1207729469,75,34,32,34],["RSA-SHA256","RSA-2048",false,false,120,false,202,13,69.9603960396,404,12,10,11],["EC-SHA256","EC-secp256r1",false,false,80,false,196,1,19.2193877551,156,7,7,7],["RSA-SHA256","RSA-1024",false,false,7300,true,195,0,0.0,0,630,630,630],["EC-SHA384","EC-secp384r1",false,false,80,false,195,1,2.7794871795,24,7,7,7],["RSA-SHA256","RSA-3072",false,false,360,false,194,3,3.7886597938,65,32,31,31],["RSA-SHA256","RSA-3072",false,false,380,false,165,2,4.2727272727,34,34,32,34],["RSA-SHA512","RSA-2048",false,false,380,false,164,2,5.993902439,159,34,32,33],["RSA-SHA256","EC-secp256r1",true,true,80,false,162,1,2.8395061728,26,7,7,7],["RSA-SHA1","RSA-1024",false,false,360,true,148,148,0.027027027,4,31,31,31],["RSA-SHA256","RSA-2048",false,false,1080,false,148,131,3.8108108108,117,94,93,94],["RSA-SHA256","RSA-4096",false,false,80,false,146,2,5.1232876712,35,8,6,7],["RSA-SHA384","RSA-2048",false,false,340,false,139,0,8.3165467626,135,31,29,30],["RSA-SHA256","EC-secp384r1",false,false,360,false,137,2,2.5839416058,16,32,31,31],["RSA-SHA256","RSA-2048",false,false,9980,true,136,0,0.0,0,863,863,863],["RSA-SHA256","RSA-2048",false,false,60,false,135,8,38.2888888889,381,6,5,5],["RSA-SHA256","RSA-2048",false,false,100,false,135,6,65.9333333333,231,10,8,9],["RSA-SHA256","RSA-2048",false,false,740,false,122,122,2.0081967213,5,65,63,64],["RSA-SHA256","RSA-4096",false,false,180,false,118,0,338.1949152542,403,17,15,16],["RSA-SHA256","RSA-2048",false,false,1820,true,118,37,1.0847457627,6,158,157,157],["RSA-SHA256","RSA-2048",false,false,5460,false,110,0,2.0090909091,5,473,473,473],["RSA-SHA256","RSA-4096",false,false,360,true,110,57,0.0818181818,2,31,31,31],["RSA-SHA512","RSA-2048",false,false,360,false,109,2,5.3853211009,113,32,31,32],["RSA-SHA256","RSA-4096",false,false,320,false,105,2,8.3142857143,110,29,27,28],["RSA-SHA1","RSA-1024",false,false,3640,true,105,74,0.2952380952,10,315,315,315],["RSA-MD5","RSA-2048",false,false,3640,true,100,0,0.0,0,315,315,315],["RSA-SHA256","EC-secp256r1",false,false,180,false,95,0,83.4526315789,100,17,15,15],["RSA-SHA384","EC-secp256r1",false,false,360,false,95,0,1.0105263158,2,31,31,31],["RSA-SHA256","EC-secp256r1",false,false,40,false,91,0,75.7802197802,77,4,4,4],["RSA-SHA384","RSA-2048",false,false,320,false,87,0,14.7011494253,260,29,27,28],["RSA-SHA384","RSA-2048",false,false,180,false,83,0,57.7108433735,83,17,15,15],["RSA-SHA1","RSA-2048",false,false,9980,true,77,0,0.025974026,2,863,863,863],["RSA-SHA256","RSA-4096",false,false,720,false,76,71,5.7631578947,246,63,63,63],["RSA-SHA256","RSA-4096",false,false,300,false,76,1,2.4342105263,12,27,25,27],["RSA-SHA256","RSA-2048",false,false,820,false,73,71,2.2191780822,20,71,70,71],["RSA-SHA256","RSA-2048",false,false,40,false,73,13,36.1917808219,362,5,3,4],["EC-SHA256","EC-secp256r1",false,false,180,false,69,67,1.0434782609,3,16,15,16],["RSA-SHA256","RSA-2048",false,false,1080,true,69,55,0.0144927536,1,94,94,94],["RSA-SHA256","EC-secp384r1",true,true,80,false,68,1,3.3235294118,52,7,7,7],["RSA-SHA256","EC-secp256r1",false,false,320,false,65,0,74.5538461538,100,29,27,28],["RSA-SHA256","RSA-1024",false,false,3640,true,62,0,0.0322580645,2,316,315,315],["EC-SHA384","EC-secp384r1",false,false,380,false,61,0,4.0983606557,28,34,32,34],["RSA-SHA256","RSA-4096",false,false,720,true,57,1,0.9122807018,1,63,63,63],["RSA-SHA256","RSA-2048",false,false,760,false,56,56,2.1607142857,17,67,65,66],["RSA-SHA256","RSA-2048",false,false,420,false,55,54,2.1636363636,6,36,36,36],["RSA-SHA256","EC-secp256r1",false,false,300,false,54,1,37.7037037037,100,27,26,26],["RSA-SHA384","RSA-3072",false,false,80,false,52,0,17.3461538462,66,7,7,7],["RSA-SHA256","RSA-2048",false,false,720,true,51,39,0.3529411765,3,63,62,63],["RSA-SHA256","EC-secp256r1",false,false,280,false,50,0,53.8,100,25,24,25],["RSA-SHA256","RSA-2048",false,false,3640,false,49,0,0.2857142857,5,315,315,315],["RSA-SHA256","EC-secp256r1",false,false,340,false,49,0,40.3469387755,100,31,29,30],["RSA-SHA384","RSA-4096",false,false,240,false,47,0,48.6808510638,50,22,21,22],["RSA-SHA256","EC-secp256r1",false,false,220,false,46,0,59.847826087,96,20,19,19],["RSA-SHA1","RSA-2048",false,false,360,false,43,43,1.7674418605,3,31,31,31],["RSA-SHA256","RSA-2048",false,false,3680,true,43,0,0.1162790698,5,317,317,317],["RSA-SHA256","RSA-2048",false,false,20,true,41,24,0.0243902439,1,2,2,2],["RSA-SHA1","RSA-1024",false,false,9980,true,40,0,0.0,0,863,863,863],["RSA-SHA384","RSA-2048",false,false,140,false,39,0,109.9487179487,179,13,12,13],["RSA-SHA256","RSA-2048",false,false,1120,false,39,39,1.9743589744,2,98,96,97],["EC-SHA256","RSA-2048",false,false,360,false,39,0,7.2820512821,100,32,31,31],["RSA-SHA512","RSA-4096",false,false,380,false,37,0,3.5405405405,10,34,33,34],["RSA-SHA256","RSA-4096",false,false,160,false,35,2,15.8571428571,127,15,14,15],["RSA-SHA256","EC-secp256r1",false,false,260,false,33,1,61.7575757576,354,24,22,23],["EC-SHA384","EC-secp256r1",false,false,180,false,33,0,45.2727272727,48,15,15,15],["RSA-SHA256","RSA-2048",false,false,1100,false,33,33,2.4545454545,12,96,95,95],["RSA-SHA256","RSA-1024",false,false,360,true,31,27,0.0,0,31,31,31],["RSA-SHA256","RSA-2048",false,false,1840,true,31,1,0.0,0,160,158,160],["RSA-SHA256","RSA-4096",false,false,280,false,31,1,5.5806451613,37,25,24,25],["EC-SHA384","RSA-4096",false,false,340,false,31,0,2.0,2,31,30,30],["EC-SHA256","EC-secp384r1",false,false,80,false,29,0,5.9310344828,10,7,7,7],["RSA-SHA256","EC-secp256r1",false,false,240,false,29,0,62.0689655172,99,22,21,21],["RSA-SHA256","EC-secp256r1",false,false,120,false,28,0,68.7142857143,100,11,10,11],["RSA-SHA256","RSA-2048",false,false,1180,false,28,28,2.0357142857,3,103,102,102],["RSA-SHA512","RSA-1024",false,false,3640,true,28,0,0.0,0,315,315,315],["RSA-SHA1","RSA-2048",false,false,1820,true,27,17,0.4074074074,2,157,157,157],["RSA-SHA256","EC-secp256r1",false,false,200,false,26,0,63.5769230769,100,18,17,18],["RSA-SHA512","RSA-4096",false,false,360,false,26,0,2.6153846154,17,32,31,32],["RSA-SHA384","RSA-2048",false,false,300,false,26,0,10.2692307692,34,27,26,26],["RSA-SHA256","RSA-2048",false,false,440,false,26,25,4.5769230769,54,39,38,39],["RSA-SHA384","RSA-4096",false,false,340,false,25,0,95.48,163,30,29,30],["RSA-SHA256","RSA-4096",false,false,1820,true,24,2,2.75,3,158,157,157],["RSA-SHA256","EC-secp256r1",false,false,100,false,24,0,53.75,100,10,8,9],["RSA-MD5","RSA-1024",false,false,360,true,24,24,0.0,0,31,31,31],["EC-SHA256","EC-secp256r1",false,false,240,false,24,0,270.0,306,22,21,21],["RSA-SHA1","RSA-2048",false,false,60,true,24,24,0.0,0,5,5,5],["EC-SHA384","RSA-2048",false,false,380,false,23,0,10.7826086957,63,34,33,33],["EC-SHA256","RSA-2048",false,false,380,false,23,0,1.6086956522,2,34,32,34],["RSA-SHA256","RSA-2048",false,false,1820,false,23,4,4.8260869565,10,157,157,157],["EC-SHA384","EC-secp384r1",false,true,80,false,23,0,5.5217391304,23,7,7,7],["EC-SHA256","EC-secp256r1",false,false,260,false,23,0,1.9130434783,4,24,23,23],["EC-SHA256","RSA-4096",false,false,360,false,23,0,56.7391304348,116,31,31,31],["RSA-SHA256","RSA-2048",false,false,0,false,23,2,2.347826087,7,1,0,1],["RSA-SHA256","RSA-2048",false,false,12380,true,22,0,0.0,0,1070,1070,1070],["RSA-SHA256","RSA-2048",false,false,2000,true,22,0,1.0,1,172,172,172],["RSA-SHA384","RSA-2048",false,false,240,false,21,0,57.8095238095,88,22,20,21],["RSA-SHA256","RSA-4096",false,false,200,false,20,2,12.55,129,18,17,18],["RSA-SHA256","RSA-2048",false,false,7300,true,20,0,0.3,4,630,630,630],["RSA-SHA256","RSA-8192",false,false,380,false,20,0,2.0,3,34,33,34],["EC-SHA384","EC-secp384r1",false,false,360,false,20,0,2.8,9,32,31,31],["RSA-SHA1","RSA-4096",false,false,3640,false,19,14,59.7894736842,102,315,315,315],["RSA-SHA256","RSA-4096",false,false,220,false,19,0,33.1578947368,190,20,19,19],["EC-SHA384","EC-secp256r1",true,true,80,false,18,0,10.5,30,7,7,7],["RSA-SHA256","RSA-4096",false,false,4000,true,18,0,0.0,0,347,347,347],["RSA-SHA256","EC-secp384r1",false,false,380,false,18,0,3.0,11,34,33,34],["RSA-SHA256","RSA-2048",false,false,800,false,17,17,2.4117647059,5,70,69,70],["RSA-SHA384","RSA-2048",false,false,100,false,17,0,33.5882352941,65,10,8,9],["RSA-SHA256","RSA-2048",false,false,820,true,16,2,1.375,5,71,70,71],["RSA-SHA1","RSA-1024",false,false,720,false,16,16,0.5625,3,63,63,63],["RSA-SHA384","RSA-4096",false,false,200,false,16,0,120.625,127,18,18,18],["RSA-SHA384","RSA-2048",false,false,200,false,15,0,15.0,81,18,17,17],["RSA-SHA384","EC-secp256r1",false,false,340,false,15,0,1.9333333333,2,31,30,30],["RSA-SHA512","RSA-2048",false,false,340,false,15,0,31.5333333333,66,31,29,30],["RSA-SHA1","RSA-2048",false,false,720,true,15,14,0.0,0,63,62,62],["RSA-SHA256","RSA-4096",false,false,260,false,14,2,6.7857142857,34,24,22,23],["RSA-SHA256","RSA-4096",false,false,240,false,14,1,12.4285714286,86,22,20,21],["RSA-SHA1","RSA-2048",false,false,1080,false,14,14,1.5,2,94,94,94],["RSA-SHA256","RSA-4096",false,false,40,false,14,1,69.5714285714,88,5,3,3],["RSA-SHA256","RSA-2048",false,false,400,false,13,13,2.2307692308,6,36,34,35],["RSA-SHA1","RSA-2048",false,false,3640,false,13,8,0.0,0,315,315,315],["RSA-SHA256","RSA-2048",false,false,1300,true,13,0,0.0,0,112,112,112],["EC-SHA384","EC-secp256r1",false,false,320,false,13,0,10.9230769231,23,29,27,28],["RSA-SHA384","RSA-2048",false,false,280,false,13,0,100.9230769231,250,25,24,24],["RSA-SHA256","RSA-2048",false,false,1460,true,13,0,0.0,0,126,126,126],["RSA-SHA1","RSA-1024",false,false,3640,false,12,6,0.1666666667,1,315,315,315],["RSA-SHA1","RSA-2048",false,false,5000,false,11,0,0.1818181818,2,432,432,432],["RSA-SHA1","RSA-2048",false,false,720,false,11,9,2.7272727273,9,63,63,63],["RSA-SHA256","RSA-4096",false,false,1080,true,11,9,0.0,0,94,94,94],["RSA-SHA1","RSA-4096",false,false,3640,true,10,3,0.0,0,315,315,315],["RSA-SHA384","RSA-2048",false,false,260,false,10,0,8.4,41,24,22,23],["RSA-SHA384","RSA-4096",false,false,320,false,10,0,83.0,114,28,28,28],["RSA-SHA256","RSA-4096",false,false,1080,false,10,10,6.4,46,94,94,94],["RSA-MD5","RSA-2048",false,false,1820,true,10,10,0.0,0,157,157,157],["RSA-SHA256","RSA-3072",false,false,160,false,10,0,2.7,4,15,15,15],["EC-SHA256","RSA-3072",false,false,360,false,10,0,37.0,37,31,31,31],["EC-SHA384","EC-secp256r1",false,false,340,false,10,0,23.9,87,31,30,30],["RSA-SHA256","RSA-2048",false,false,4080,true,9,0,0.0,0,353,353,353],["EC-SHA384","EC-secp256r1",false,false,300,false,9,0,26.2222222222,50,27,26,26],["RSA-SHA256","RSA-2048",false,false,180,true,9,8,0.2222222222,1,15,15,15],["RSA-SHA384","RSA-2048",false,false,220,false,9,0,13.6666666667,94,20,19,19],["RSA-SHA256","RSA-2048",false,false,3500,true,9,0,0.0,0,302,302,302],["RSA-SHA384","RSA-4096",false,false,220,false,9,0,168.0,168,20,20,20],["RSA-SHA256","RSA-2048",false,false,2180,false,8,1,0.0,0,189,189,189],["RSA-SHA1","RSA-1024",false,false,20,true,8,8,0.0,0,2,2,2],["RSA-SHA1","RSA-1024",false,false,360,false,8,8,0.0,0,31,31,31],["RSA-SHA256","RSA-2048",false,false,1140,false,8,8,3.75,8,100,98,99],["RSA-SHA1","RSA-2048",false,false,380,false,8,8,1.375,2,34,33,34],["RSA-SHA256","EC-secp256r1",false,false,60,false,8,0,91.0,99,6,5,6],["RSA-SHA256","RSA-4095",false,false,1820,true,8,0,0.0,0,157,157,157],["RSA-SHA256","RSA-4096",false,false,740,false,8,8,3.0,6,65,64,64],["RSA-SHA1","RSA-4096",false,false,1080,false,8,8,0.0,0,94,94,94],["RSA-SHA256","RSA-4096",false,false,3640,false,8,2,1.0,4,315,315,315],["RSA-SHA256","RSA-4096",false,false,760,false,7,7,2.0,2,67,65,66],["RSA-SHA256","RSA-4096",false,false,120,false,7,0,6.5714285714,30,12,10,11],["RSA-SHA256","RSA-1024",false,false,7200,false,7,0,1.0,1,622,622,622],["RSA-SHA512","RSA-2048",false,false,720,false,6,4,6.5,32,63,63,63],["RSA-SHA384","RSA-4096",false,false,260,false,6,0,95.0,142,24,23,23],["EC-SHA384","RSA-2048",false,false,340,false,6,0,3.5,4,30,30,30],["RSA-SHA256","RSA-2048",false,false,500,false,6,5,3.1666666667,9,44,43,44],["RSA-SHA1","RSA-4096",false,false,360,false,6,6,1.6666666667,2,31,31,31],["RSA-SHA384","RSA-2048",false,false,720,false,6,5,1.8333333333,2,63,63,63],["RSA-MD5","RSA-2048",false,false,360,true,6,5,0.1666666667,1,31,31,31],["RSA-SHA512","RSA-4096",false,false,340,false,6,0,5.8333333333,10,31,30,30],["RSA-SHA256","RSA-8192",false,false,360,false,6,0,2.0,2,31,31,31],["RSA-SHA1","RSA-2048",false,false,1120,false,6,6,1.1666666667,2,97,97,97],["RSA-SHA256","RSA-4096",false,false,400,false,6,6,2.0,2,35,35,35],["RSA-SHA512","EC-secp256r1",false,false,340,false,6,0,64.0,64,30,30,30],["RSA-SHA256","RSA-2048",false,false,3660,true,6,0,0.0,0,316,316,316],["RSA-SHA512","RSA-8192",false,false,3640,true,5,0,0.0,0,315,315,315],["RSA-SHA256","EC-secp384r1",false,false,80,false,5,0,5.2,13,7,7,7],["RSA-SHA1","RSA-2048",false,false,1100,false,5,5,2.0,2,96,95,95],["RSA-SHA256","RSA-2048",true,false,380,false,5,0,2.0,2,34,34,34],["RSA-SHA256","RSA-4096",false,false,60,false,5,1,57.0,91,6,5,6],["RSA-SHA256","EC-secp384r1",false,false,340,false,5,0,2.0,2,30,29,30],["RSA-SHA256","RSA-2048",false,false,1000,true,5,2,0.0,0,86,86,86],["RSA-SHA256","RSA-3072",false,false,300,false,5,0,2.0,2,27,26,26],["RSA-SHA1","RSA-1024",false,false,10000,true,5,0,0.0,0,864,864,864],["RSA-SHA256","RSA-3072",false,false,340,false,5,0,2.0,2,30,29,29],["RSA-SHA1","RSA-2048",false,false,760,false,5,5,2.0,2,66,65,65],["RSA-SHA1","RSA-1024",false,false,2920,true,5,5,0.0,0,252,252,252],["RSA-SHA512","RSA-2048",false,false,180,false,5,4,6.6,19,16,15,15],["RSA-SHA512","RSA-4096",false,false,720,false,5,3,5.2,16,63,63,63],["RSA-SHA1","RSA-2048",false,false,1460,false,5,5,2.0,2,126,126,126],["RSA-SHA256","RSA-2048",false,false,9300,false,4,0,0.0,0,803,803,803],["RSA-SHA256","RSA-2048",false,false,680,false,4,4,11.0,20,60,59,59],["RSA-SHA256","RSA-3072",false,false,3640,true,4,0,0.0,0,315,315,315],["RSA-SHA256","RSA-2048",false,false,1160,false,4,4,1.5,2,101,100,100],["RSA-SHA256","RSA-3072",false,false,260,false,4,0,4.0,5,23,22,22],["RSA-SHA256","RSA-4096",false,false,20,true,4,4,0.0,0,2,2,2],["RSA-SHA256","RSA-3072",true,true,80,false,4,0,4.5,10,7,7,7],["RSA-SHA256","RSA-2048",false,false,1460,false,4,3,0.75,2,126,126,126],["RSA-SHA256","RSA-2048",false,false,1800,true,4,0,0.0,0,156,155,155],["RSA-SHA256","RSA-2048",false,false,7300,false,4,0,6.25,21,631,630,631],["RSA-MD5","RSA-2048",false,false,9980,true,4,0,0.0,0,863,863,863],["RSA-SHA256","RSA-2048",false,false,7200,false,4,0,0.0,0,622,622,622],["RSA-SHA256","RSA-4096",false,false,9000,true,4,0,0.0,0,777,777,777],["RSA-SHA256","RSA-4096",false,false,18240,true,4,0,0.0,0,1576,1576,1576],["RSA-SHA384","RSA-3072",false,false,380,false,4,0,7.75,14,34,34,34],["RSA-SHA1","RSA-2048",false,false,1820,false,4,4,2.0,2,157,157,157],["RSA-SHA384","RSA-2048",false,false,120,false,4,0,72.0,102,11,10,11],["RSA-SHA256","RSA-2048",false,false,660,false,4,3,2.25,3,58,57,57],["EC-SHA384","EC-secp256r1",false,false,160,false,4,0,4.0,6,14,14,14],["RSA-SHA512","EC-secp256r1",false,false,11000,false,4,0,0.0,0,950,950,950],["RSA-SHA1","RSA-2048",false,false,1080,true,4,4,0.0,0,94,94,94],["RSA-SHA256","RSA-4096",false,false,1000,false,4,4,18.0,18,86,86,86],["RSA-SHA256","RSA-4096",false,false,820,false,4,4,4.0,9,71,70,71],["RSA-SHA256","RSA-4096",false,false,780,false,4,4,2.0,2,68,68,68],["RSA-SHA1","RSA-4096",false,false,360,true,4,4,0.0,0,31,31,31],["EC-SHA256","EC-secp256r1",false,false,5460,false,4,0,1.75,2,473,473,473],["RSA-SHA256","RSA-4096",false,false,420,false,4,4,2.0,2,36,36,36],["EC-SHA512","RSA-2048",false,false,80,false,3,3,6.0,6,7,7,7],["RSA-MD5","RSA-1024",false,false,360,false,3,3,0.0,0,31,31,31],["RSA-SHA384","RSA-3072",false,false,320,false,3,0,10.6666666667,15,29,27,28],["RSA-MD5","RSA-1024",false,false,2180,true,3,3,0.0,0,189,189,189],["RSA-MD5","RSA-1024",false,false,3640,true,3,1,0.0,0,315,315,315],["RSA-SHA384","RSA-3072",false,false,340,false,3,0,11.0,29,31,29,30],["RSA-SHA256","RSA-2048",false,false,700,false,3,3,2.3333333333,4,61,61,61],["RSA-SHA256","RSA-3072",false,false,240,false,3,0,16.0,16,21,21,21],["EC-SHA384","RSA-3072",false,false,380,false,3,0,8.0,8,33,33,33],["EC-SHA384","EC-secp384r1",true,true,80,false,3,0,2.0,2,7,7,7],["RSA-SHA512","RSA-2048",false,false,320,false,3,0,2.6666666667,4,28,27,28],["EC-SHA256","EC-secp384r1",true,false,360,false,3,0,90.6666666667,269,31,31,31],["EC-SHA256","EC-secp384r1",false,false,340,false,3,1,2.0,2,30,29,29],["RSA-SHA512","RSA-2048",false,false,3640,false,3,0,0.0,0,315,315,315],["RSA-SHA256","RSA-2048",false,false,7820,false,3,0,0.0,0,675,675,675],["EC-SHA384","EC-secp256r1",false,false,240,false,3,0,9.3333333333,13,21,21,21],["RSA-MD5","RSA-2048",false,false,3640,false,3,3,0.0,0,315,315,315],["RSA-SHA256","RSA-4096",false,false,1820,false,3,3,0.6666666667,2,157,157,157],["RSA-SHA1","RSA-1024",false,false,3560,false,3,3,1.0,1,307,307,307],["RSA-SHA256","RSA-2048",false,false,460,false,3,3,1.6666666667,2,41,40,40],["RSA-SHA1","RSA-4096",false,false,720,false,3,3,2.0,3,63,63,63],["RSA-SHA1","RSA-2048",false,false,9000,true,3,0,0.0,0,777,777,777],["RSA-SHA1","RSA-2048",false,false,7300,true,3,0,0.0,0,631,630,630],["RSA-SHA1","RSA-2048",false,false,2540,true,3,3,0.0,0,220,220,220],["EC-SHA256","EC-secp256r1",false,false,0,true,3,0,0.3333333333,1,0,0,0],["RSA-SHA1","RSA-1024",false,false,1080,false,3,3,0.6666666667,2,94,94,94],["RSA-SHA1","RSA-1024",false,false,1080,true,3,3,0.0,0,94,94,94],["RSA-SHA384","RSA-2048",false,false,60,false,2,1,140.0,158,6,5,6],["RSA-SHA256","RSA-4096",false,false,9840,false,2,0,1.0,1,850,850,850],["RSA-SHA512","RSA-8192",false,false,720,false,2,2,4.0,4,63,63,63],["RSA-SHA256","RSA-4096",false,false,440,false,2,2,2.0,2,39,38,38],["RSA-SHA256","RSA-2048",false,false,9120,false,2,0,0.5,1,789,788,788],["RSA-SHA256","RSA-4096",false,false,980,true,2,1,17.5,35,86,86,86],["RSA-SHA256","RSA-3072",false,false,720,false,2,2,2.0,2,63,63,63],["RSA-SHA384","RSA-2048",false,false,160,false,2,0,1.5,2,14,14,14],["RSA-SHA512","RSA-2048",false,false,100,false,2,0,2.0,2,10,10,10],["RSA-SHA256","RSA-4096",false,false,1100,false,2,2,13.0,24,95,95,95],["RSA-SHA256","RSA-4096",false,false,1180,false,2,2,2.0,2,102,102,102],["RSA-SHA384","RSA-4096",true,false,360,false,2,0,2.0,2,31,31,31],["RSA-SHA256","RSA-3072",false,false,280,false,2,0,6.0,10,25,25,25],["RSA-SHA256","RSA-2048",false,false,10940,true,2,0,0.0,0,946,946,946],["RSA-SHA384","RSA-2048",true,false,360,false,2,0,2.0,2,32,32,32],["RSA-SHA384","RSA-4096",false,false,160,false,2,0,131.0,131,15,15,15],["RSA-SHA256","RSA-4096",false,false,2980,true,2,0,0.0,0,259,259,259],["RSA-SHA384","RSA-4096",false,false,140,false,2,0,33.0,33,12,12,12],["RSA-SHA384","RSA-4096",false,false,100,false,2,0,30.0,30,9,9,9],["RSA-SHA384","RSA-4096",false,false,60,false,2,0,30.0,30,5,5,5],["RSA-SHA256","RSA-3072",false,false,1460,true,2,0,0.0,0,126,126,126],["RSA-SHA384","RSA-2048",true,false,80,false,2,0,4.5,7,7,7,7],["RSA-SHA256","RSA-2048",false,false,840,false,2,2,2.0,2,74,73,73],["RSA-SHA1","RSA-2048",false,false,420,false,2,2,1.5,2,37,37,37],["RSA-SHA1","RSA-1024",false,false,720,true,2,1,0.0,0,63,63,63],["RSA-SHA256","RSA-2048",false,false,300,true,2,0,0.0,0,25,25,25],["RSA-SHA256","RSA-2048",false,false,1640,false,2,1,1.5,2,142,141,142],["RSA-SHA256","RSA-2048",false,false,1480,false,2,1,5.5,9,129,128,129],["RSA-MD5","RSA-1024",false,false,9120,false,2,0,0.0,0,788,788,788],["EC-SHA384","EC-secp256r1",false,false,60,false,2,0,17.5,28,6,5,5],["RSA-SHA256","RSA-2048",false,false,980,true,2,1,0.0,0,86,86,86],["EC-SHA384","EC-secp256r1",false,false,200,false,2,0,45.5,90,18,17,18],["RSA-SHA256","RSA-2048",false,false,960,false,2,2,2.0,2,84,84,84],["EC-SHA384","EC-secp256r1",false,false,260,false,2,0,6.0,6,23,23,23],["EC-SHA384","EC-secp256r1",false,false,280,false,2,0,4.0,4,25,25,25],["EC-SHA384","EC-secp384r1",false,false,180,false,2,0,4.0,4,16,16,16],["RSA-SHA256","RSA-2048",false,false,800,true,2,0,0.0,0,69,69,69],["EC-SHA384","RSA-4096",false,false,380,false,2,0,4.5,7,34,33,33],["EC-SHA384","EC-secp384r1",false,false,220,false,2,0,13.0,13,20,20,20],["RSA-SHA256","RSA-2048",false,false,620,false,2,2,2.0,2,53,53,53],["EC-SHA384","RSA-4096",false,false,360,false,2,0,2.0,2,31,31,31],["RSA-SHA256","RSA-2048",false,false,580,false,2,2,2.0,2,51,51,51],["RSA-SHA256","RSA-2048",false,false,540,false,2,2,2.5,3,47,47,47],["RSA-SHA256","RSA-2048",false,false,480,false,2,0,9.0,9,42,42,42],["RSA-SHA256","RSA-2048",false,false,2320,true,2,0,0.0,0,200,200,200],["RSA-SHA256","RSA-2048",false,false,2000,false,2,0,0.5,1,172,172,172],["RSA-SHA1","RSA-1024",false,false,3660,true,2,0,0.0,0,316,316,316],["RSA-SHA1","RSA-1024",false,false,1000,true,2,2,0.0,0,86,86,86],["RSA-SHA1","RSA-2048",false,false,40,false,2,2,6.0,6,4,4,4],["RSA-SHA1","RSA-2048",false,false,20,false,2,2,2.0,2,2,2,2],["EC-SHA256","EC-secp256r1",false,false,3640,true,2,0,0.0,0,315,315,315],["RSA-SHA1","RSA-2048",false,false,1280,true,2,0,0.0,0,110,110,110],["RSA-SHA1","RSA-1024",false,false,1820,true,2,0,0.0,0,157,157,157],["RSA-SHA256","RSA-2048",false,false,80,true,2,0,3.5,7,7,7,7],["RSA-SHA1","RSA-2048",false,false,2000,true,2,0,0.0,0,172,172,172],["RSA-SHA384","EC-secp384r1",false,false,380,false,1,0,2.0,2,34,34,34],["RSA-SHA1","RSA-1024",false,false,7300,true,1,0,0.0,0,630,630,630],["RSA-SHA1","RSA-2047",false,false,360,true,1,1,0.0,0,31,31,31],["RSA-MD5","RSA-2048",false,false,3280,true,1,0,0.0,0,283,283,283],["EC-SHA512","EC-secp521r1",false,false,3600,false,1,0,1.0,1,311,311,311],["RSA-MD5","RSA-2048",false,false,3680,true,1,0,0.0,0,318,318,318],["RSA-SHA384","RSA-2048",false,false,20,false,1,0,119.0,119,2,2,2],["RSA-MD5","RSA-1024",false,false,10940,true,1,0,0.0,0,946,946,946],["EC-SHA512","EC-secp521r1",false,false,3640,true,1,0,6.0,6,315,315,315],["RSA-SHA1","RSA-2048",false,false,20,true,1,1,0.0,0,2,2,2],["RSA-MD5","RSA-4096",false,false,20,true,1,1,0.0,0,2,2,2],["RSA-SHA1","RSA-2048",false,false,180,true,1,1,0.0,0,15,15,15],["RSA-SHA384","EC-secp256r1",false,false,320,false,1,0,2.0,2,29,29,29],["EC-SHA384","RSA-2048",false,false,200,false,1,0,2.0,2,18,18,18],["RSA-SHA256","RSA-8192",false,false,3640,false,1,0,0.0,0,315,315,315],["RSA-SHA384","EC-secp384r1",false,false,360,false,1,0,2.0,2,32,32,32],["RSA-MD5","RSA-1024",false,false,20,true,1,1,0.0,0,2,2,2],["RSA-MD5","RSA-1024",false,false,80,false,1,1,0.0,0,7,7,7],["RSA-MD5","RSA-1024",false,false,960,false,1,1,0.0,0,83,83,83],["RSA-MD5","RSA-2048",false,false,1840,true,1,0,0.0,0,160,160,160],["RSA-MD5","RSA-4096",false,false,3640,true,1,0,14.0,14,315,315,315],["RSA-MD5","RSA-1024",false,false,1080,false,1,1,0.0,0,94,94,94],["RSA-MD5","RSA-1024",false,false,7300,true,1,0,0.0,0,630,630,630],["RSA-SHA384","RSA-3072",false,false,20,false,1,0,2.0,2,2,2,2],["RSA-SHA384","RSA-2048",true,false,380,false,1,0,2.0,2,34,34,34],["RSA-SHA1","RSA-1024",false,false,3280,true,1,1,0.0,0,283,283,283],["RSA-MD5","RSA-2048",false,false,360,false,1,1,0.0,0,31,31,31],["RSA-SHA1","RSA-1024",false,false,1460,true,1,1,0.0,0,126,126,126],["RSA-MD5","RSA-1024",false,false,10000,false,1,0,0.0,0,864,864,864],["RSA-SHA384","RSA-2048",false,false,820,true,1,0,0.0,0,71,71,71],["RSA-SHA1","RSA-1024",false,false,1120,false,1,1,2.0,2,97,97,97],["RSA-SHA1","RSA-1024",false,false,80,true,1,1,0.0,0,7,7,7],["RSA-SHA256","RSA-2048",false,false,6380,true,1,0,0.0,0,552,552,552],["EC-SHA384","EC-secp384r1",true,false,80,false,1,0,2.0,2,7,7,7],["RSA-SHA512","RSA-2048",false,false,360,true,1,1,0.0,0,31,31,31],["RSA-SHA512","RSA-2048",false,false,400,false,1,0,2.0,2,34,34,34],["EC-SHA256","EC-secp384r1",false,false,180,false,1,1,2.0,2,16,16,16],["RSA-SHA512","RSA-2048",false,false,1080,false,1,0,1.0,1,94,94,94],["EC-SHA256","EC-secp256r1",false,false,7300,true,1,0,0.0,0,630,630,630],["RSA-SHA512","RSA-2048",false,false,3640,true,1,0,0.0,0,315,315,315],["RSA-SHA512","RSA-3072",false,false,340,false,1,0,2.0,2,30,30,30],["RSA-SHA512","RSA-4096",false,false,160,false,1,0,3.0,3,15,15,15],["RSA-SHA512","RSA-4096",false,false,320,false,1,1,2.0,2,27,27,27],["EC-SHA256","EC-secp256r1",false,false,5080,true,1,0,0.0,0,439,439,439],["EC-SHA256","EC-secp256r1",false,false,4080,true,1,0,0.0,0,353,353,353],["EC-SHA256","EC-secp256r1",false,false,3640,false,1,0,7.0,7,315,315,315],["RSA-SHA512","RSA-4096",false,false,760,false,1,1,2.0,2,67,67,67],["RSA-SHA512","RSA-4096",false,false,980,true,1,0,0.0,0,86,86,86],["RSA-SHA512","RSA-4096",false,false,1000,true,1,1,0.0,0,86,86,86],["RSA-SHA512","RSA-4096",false,false,1020,true,1,1,0.0,0,88,88,88],["RSA-SHA512","RSA-4096",false,false,3640,true,1,0,3.0,3,315,315,315],["RSA-SHA512","RSA-4096",false,false,4500,true,1,0,0.0,0,388,388,388],["EC-SHA256","EC-secp256r1",false,false,440,false,1,1,2.0,2,39,39,39],["EC-SHA256","EC-secp256r1",false,false,200,false,1,0,2.0,2,18,18,18],["EC-SHA256","EC-secp384r1",false,false,260,false,1,0,4.0,4,22,22,22],["EC-SHA256","EC-secp384r1",false,false,320,false,1,0,2.0,2,29,29,29],["EC-SHA384","EC-secp384r1",false,false,340,false,1,0,4.0,4,30,30,30],["EC-SHA256","EC-secp384r1",false,false,720,false,1,1,2.0,2,63,63,63],["EC-SHA384","EC-secp384r1",false,false,320,false,1,0,2.0,2,29,29,29],["RSA-SHA1","RSA-2048",false,false,460,false,1,1,2.0,2,41,41,41],["EC-SHA384","EC-secp256r1",false,false,360,true,1,1,0.0,0,31,31,31],["RSA-SHA384","RSA-4096",false,false,720,false,1,1,2.0,2,63,63,63],["RSA-SHA384","RSA-4096",false,false,760,false,1,1,2.0,2,66,66,66],["RSA-SHA384","RSA-4096",false,false,820,false,1,1,1.0,1,71,71,71],["RSA-SHA384","RSA-4096",false,false,3640,true,1,0,0.0,0,315,315,315],["RSA-SHA384","RSA-8192",false,false,360,false,1,0,2.0,2,31,31,31],["EC-SHA384","EC-secp256r1",false,false,140,false,1,0,2.0,2,13,13,13],["RSA-SHA512","EC-secp256r1",false,false,360,false,1,0,2.0,2,31,31,31],["EC-SHA384","EC-secp256r1",false,false,100,false,1,0,76.0,76,8,8,8],["RSA-SHA512","RSA-2048",false,false,60,false,1,0,1.0,1,5,5,5],["RSA-SHA512","RSA-2048",false,false,60,true,1,1,1.0,1,5,5,5],["EC-SHA256","RSA-4096",false,false,380,false,1,0,1.0,1,34,34,34],["RSA-SHA512","RSA-2048",false,false,160,false,1,0,4.0,4,14,14,14],["EC-SHA256","RSA-2048",false,false,320,false,1,0,2.0,2,28,28,28],["RSA-SHA512","RSA-2048",false,false,240,false,1,0,3.0,3,22,22,22],["RSA-SHA512","RSA-2048",false,false,280,false,1,0,2.0,2,25,25,25],["EC-SHA256","EC-secp521r1",false,false,360,true,1,0,0.0,0,31,31,31],["RSA-SHA384","RSA-4096",false,false,300,false,1,0,5.0,5,27,27,27],["RSA-SHA1","RSA-2048",false,false,1000,true,1,1,0.0,0,86,86,86],["RSA-SHA256","RSA-8192",false,false,340,false,1,0,18.0,18,29,29,29],["RSA-SHA256","RSA-3072",false,false,820,true,1,0,1.0,1,71,71,71],["RSA-SHA256","RSA-3072",false,false,80,false,1,1,2.0,2,7,7,7],["RSA-SHA256","RSA-2048",false,false,2520,true,1,0,0.0,0,218,218,218],["RSA-SHA256","RSA-3072",false,false,180,false,1,0,1.0,1,17,17,17],["RSA-SHA256","RSA-3072",false,false,220,false,1,0,10.0,10,20,20,20],["RSA-SHA256","RSA-2048",false,false,2040,true,1,1,0.0,0,176,176,176],["RSA-SHA256","RSA-3072",false,false,320,false,1,0,8.0,8,28,28,28],["RSA-SHA256","RSA-2048",false,false,1500,false,1,1,0.0,0,129,129,129],["RSA-SHA256","RSA-2048",false,false,1360,false,1,0,11.0,11,118,118,118],["RSA-SHA256","RSA-2048",false,false,1340,false,1,1,2.0,2,117,117,117],["RSA-SHA256","RSA-2048",false,false,1060,false,1,1,1.0,1,91,91,91],["RSA-SHA256","RSA-2048",false,false,3000,true,1,0,0.0,0,259,259,259],["RSA-SHA256","RSA-2048",false,false,1040,false,1,1,2.0,2,90,90,90],["RSA-SHA256","RSA-2048",false,false,1000,false,1,1,2.0,2,87,87,87],["RSA-SHA256","RSA-3112",false,false,380,false,1,0,22.0,22,34,34,34],["RSA-SHA256","RSA-2048",false,false,980,false,1,0,2.0,2,86,86,86],["RSA-SHA256","RSA-4096",false,false,0,false,1,1,0.0,0,0,0,0],["RSA-SHA256","RSA-4096",false,false,0,true,1,1,0.0,0,0,0,0],["RSA-SHA256","RSA-4096",false,false,20,false,1,1,2.0,2,2,2,2],["RSA-SHA256","RSA-2048",false,false,940,false,1,1,2.0,2,81,81,81],["RSA-SHA256","RSA-2048",false,false,920,false,1,1,5.0,5,80,80,80],["RSA-SHA256","RSA-2048",false,false,2920,false,1,0,1.0,1,252,252,252],["RSA-SHA256","RSA-2048",true,false,360,false,1,0,2.0,2,31,31,31],["RSA-SHA256","RSA-4096",false,false,100,false,1,0,2.0,2,8,8,8],["RSA-SHA256","RSA-2048",false,false,5080,true,1,0,7.0,7,440,440,440],["RSA-SHA256","RSA-2048",false,false,6140,true,1,0,0.0,0,532,532,532],["RSA-SHA256","RSA-2048",false,false,5940,true,1,0,0.0,0,514,514,514],["RSA-SHA256","RSA-2048",false,false,7660,true,1,0,0.0,0,662,662,662],["RSA-SHA256","RSA-2048",false,false,5620,true,1,0,0.0,0,485,485,485],["RSA-SHA256","RSA-2048",false,false,8220,true,1,0,0.0,0,710,710,710],["RSA-SHA256","RSA-2048",false,false,8320,true,1,0,0.0,0,719,719,719],["RSA-SHA256","RSA-2048",false,false,8400,true,1,0,0.0,0,727,727,727],["RSA-SHA256","RSA-2048",false,false,8460,true,1,0,0.0,0,731,731,731],["RSA-SHA256","RSA-2048",false,false,8640,true,1,0,0.0,0,747,747,747],["RSA-SHA256","RSA-2048",false,false,5020,true,1,0,0.0,0,433,433,433],["RSA-SHA256","RSA-2048",false,false,3440,true,1,0,0.0,0,298,298,298],["RSA-SHA256","RSA-2048",false,false,4200,false,1,0,1.0,1,362,362,362],["RSA-SHA256","RSA-2048",false,false,3680,false,1,0,0.0,0,317,317,317],["RSA-SHA256","RSA-2048",false,false,3600,true,1,0,0.0,0,311,311,311],["RSA-SHA256","RSA-2048",false,false,11460,false,1,0,2.0,2,990,990,990],["RSA-SHA256","RSA-2048",false,false,12100,false,1,0,0.0,0,1045,1045,1045],["RSA-SHA256","RSA-2048",false,false,12340,false,1,0,0.0,0,1066,1066,1066],["RSA-SHA256","RSA-2048",false,false,3560,false,1,0,0.0,0,307,307,307],["RSA-SHA256","RSA-2048",false,false,12400,false,1,0,0.0,0,1072,1072,1072],["RSA-SHA256","RSA-2048",false,false,13640,true,1,0,0.0,0,1179,1179,1179],["RSA-SHA256","RSA-2048",false,false,860,false,1,1,17.0,17,75,75,75],["RSA-SHA256","RSA-4096",false,false,140,false,1,0,2.0,2,12,12,12],["RSA-SHA256","RSA-8192",false,false,320,false,1,0,2.0,2,28,28,28],["RSA-SHA256","RSA-4096",false,false,5460,false,1,0,2.0,2,473,473,473],["RSA-SHA256","RSA-4096",false,false,1120,false,1,1,2.0,2,97,97,97],["RSA-SHA1","RSA-2048",false,false,3680,true,1,0,0.0,0,318,318,318],["RSA-SHA256","RSA-4096",false,false,1620,false,1,1,2.0,2,141,141,141],["RSA-SHA1","RSA-2048",false,false,1640,false,1,1,1.0,1,141,141,141],["RSA-SHA1","RSA-2048",false,false,1520,true,1,1,0.0,0,132,132,132],["RSA-SHA256","RSA-4096",false,false,3560,true,1,0,0.0,0,307,307,307],["RSA-SHA1","RSA-2048",false,false,1480,false,1,1,1.0,1,128,128,128],["RSA-SHA1","RSA-2048",false,false,1460,true,1,1,0.0,0,126,126,126],["RSA-SHA256","RSA-4096",false,false,3700,false,1,0,0.0,0,319,319,319],["RSA-SHA256","RSA-4096",false,false,7300,true,1,0,0.0,0,630,630,630],["RSA-SHA1","RSA-2048",false,false,5940,true,1,0,8.0,8,513,513,513],["RSA-SHA256","RSA-4096",false,false,8020,true,1,0,0.0,0,693,693,693],["RSA-SHA1","RSA-2048",false,false,1140,false,1,1,2.0,2,98,98,98],["RSA-SHA1","RSA-2048",false,false,1020,true,1,0,0.0,0,88,88,88],["RSA-SHA256","RSA-2048",false,false,6260,true,1,0,7.0,7,541,541,541],["RSA-SHA1","RSA-2048",false,false,980,true,1,0,0.0,0,86,86,86],["RSA-SHA1","RSA-2048",false,false,820,true,1,0,1.0,1,71,71,71],["RSA-SHA1","RSA-2048",false,false,700,false,1,1,1.0,1,60,60,60],["RSA-SHA256","RSA-5120",false,false,380,false,1,0,2.0,2,34,34,34],["RSA-SHA256","RSA-8192",false,false,300,false,1,0,2.0,2,27,27,27],["RSA-SHA1","RSA-2048",false,false,5000,true,1,0,0.0,0,432,432,432],["RSA-SHA1","RSA-2048",false,false,7660,true,1,0,9.0,9,662,662,662],["RSA-SHA256","RSA-2048",false,false,640,false,1,0,9.0,9,55,55,55],["RSA-SHA256","RSA-4096",false,false,700,false,1,1,2.0,2,60,60,60],["RSA-SHA256","RSA-2048",false,false,600,false,1,1,2.0,2,52,52,52],["RSA-SHA256","RSA-2048",false,false,520,false,1,1,0.0,0,45,45,45],["RSA-SHA256","RSA-2048",false,false,380,true,1,0,1.0,1,34,34,34],["RSA-SHA256","RSA-2048",false,false,0,true,1,0,1.0,1,0,0,0],["RSA-SHA256","RSA-1024",false,false,18240,true,1,0,0.0,0,1576,1576,1576],["RSA-SHA256","RSA-1024",false,false,5460,false,1,0,2.0,2,473,473,473],["RSA-SHA256","RSA-1024",false,false,3640,false,1,0,0.0,0,315,315,315],["RSA-SHA256","RSA-1024",false,false,1800,true,1,1,0.0,0,155,155,155],["RSA-SHA256","RSA-1024",false,false,720,false,1,0,0.0,0,63,63,63],["RSA-SHA256","EC-secp384r1",false,false,320,false,1,0,2.0,2,28,28,28],["RSA-SHA1","RSA-2048",false,false,10000,true,1,0,0.0,0,864,864,864],["RSA-SHA256","EC-secp256r1",false,false,2820,false,1,0,2.0,2,245,245,245],["RSA-SHA1","RSA-4096",false,false,3500,true,1,0,0.0,0,302,302,302],["RSA-SHA1","RSA-4096",false,false,1080,true,1,1,0.0,0,94,94,94],["RSA-SHA1","RSA-4096",false,false,20,true,1,1,0.0,0,2,2,2],["RSA-SHA1","RSA-3072",false,false,18240,true,1,0,0.0,0,1576,1576,1576],["RSA-SHA256","RSA-4096",false,false,820,true,1,0,0.0,0,71,71,71],["RSA-SHA256","RSA-4096",false,false,900,true,1,1,0.0,0,78,78,78],["RSA-SHA256","RSA-4096",false,false,920,false,1,1,2.0,2,80,80,80],["RSA-SHA1","RSA-2048",false,false,12080,true,1,0,0.0,0,1044,1044,1044],["Unknown OID","RSA-2048",false,false,8100,true,1,0,0.0,0,700,700,700]]}
+const certData = certRows.data.map(row => Object.fromEntries(certRows.columns.map((c, i) => [c, row[i]])))
+
+dc.config.defaultColors(d3.schemePaired)
+
+
+const ndx = crossfilter(certData);
+const all = ndx.groupAll().reduceSum(d => d.count)
+
+const maxSanGroupAll = ndx.groupAll().reduce(
+    (p, v) => {
+        if (!p.sans.has(v.max_san_count))
+            p.sans.set(v.max_san_count, 1)
+        else
+            p.sans.set(v.max_san_count, p.sans.get(v.max_san_count) + 1)
+
+        if (v.max_san_count > p.maxSan) {
+            p.maxSan = v.max_san_count
+        }
+        return p;
+    },
+    (p, v) => {
+        let newCnt = p.sans.get(v.max_san_count) - 1
+        p.sans.set(v.max_san_count, newCnt)
+
+        if (p.maxSan === v.max_san_count && newCnt <= 0) {
+            let newMax = 0
+            for (const [key, value] of p.sans) {
+                if (value > 0 && key > newMax)
+                    newMax = key
+            }
+            p.maxSan = newMax
+        }
+        return p;
+    },
+    () => ({sans: new Map(), maxSan: 0})
+)
+
+const avgSanGroupAll = ndx.groupAll().reduce(
+    (p, v) => {
+        let newCnt = p.count + v.count
+        let avg = (p.avg * p.count + v.avg_san_count * v.count) / newCnt
+        p.count = newCnt
+        p.avg = avg
+        return p
+    },
+    (p, v) => {
+        let newCnt = p.count - v.count
+
+        let avg = 0
+        if (newCnt !== 0)
+          avg = (p.avg * p.count - v.avg_san_count * v.count) / newCnt
+
+        p.count = newCnt
+        p.avg = avg
+        return p
+    },
+    () => ({count: 0, avg: 0})
+)
+
+const ocsp = {
+  value: () => {
+    return ndx.groupAll().reduceSum(d => d.ocsp_must_staple ? d.count : 0).value()
+  }
+}
+
+const signatureDim = ndx.dimension(d => d.signature_alg);
+const signatureCountGroup = signatureDim.group().reduceSum(d => d.count);
+
+const keyDetailDim = ndx.dimension(d => d.public_key_detail);
+const keyDetailCountGroup = keyDetailDim.group().reduceSum(d => d.count);
+
+const leDim = ndx.dimension(d => d.le ? "Uses LE" : "Other");
+const leDimGroup = leDim.group().reduceSum(d => d.count);
+
+const selfSignedDim = ndx.dimension(d => d.self_signed ? "Self-signed" : "Signed");
+const selfSignedGroup = selfSignedDim.group().reduceSum(d => d.count);
+
+const validityDim = ndx.dimension(d => d.valid_bin);
+const validityDimGroup = validityDim.group().reduceSum(d => d.count);
+
+
+const dataCount = new dc.DataCount("#data-count");
+dataCount
+  .crossfilter(ndx)
+  .groupAll(ndx.groupAll())
+  .html({
+      some: '<strong>%filter-count</strong> selected out of <strong>%total-count</strong> records' +
+          ' | <a href=\'javascript:dc.filterAll(); dc.renderAll();\'>Reset All</a>',
+      all: 'All records selected. Click on a graph to apply filters.'
+  });
+dataCount.render()
+
+
+var signatureType = new dc.BarChart("#signature-type");
+signatureType
+  .width(700)
+  .height(300)
+  .margins({left: 55, top: 20, right:0, bottom: 40})
+  .clipPadding(20)
+  .x(d3.scaleBand())
+  .xUnits(dc.units.ordinal)
+  .xAxisLabel("Signature Type")
+  .yAxisLabel("Certificates")
+  .label(d => d.data.value)
+  .elasticY(true)
+  .renderHorizontalGridLines(true)
+  .dimension(signatureDim)
+  .group(signatureCountGroup);
+
+signatureType.render();
+
+const pubKeyChart = new dc.BarChart("#pubkey");
+pubKeyChart
+  .width(1000)
+  .height(300)
+  .margins({left: 55, top: 20, right:0, bottom: 40})
+  .clipPadding(20)
+  .x(d3.scaleBand())
+  .xUnits(dc.units.ordinal)
+  .xAxisLabel("Public Key Type")
+  .yAxisLabel("Certificates")
+  .label(d => d.data.value)
+  .elasticY(true)
+  .renderHorizontalGridLines(true)
+  .dimension(keyDetailDim)
+  .group(keyDetailCountGroup);
+
+pubKeyChart.render();
+
+var leChart = new dc.PieChart("#leChart")
+leChart
+  .width(200)
+  .height(200)
+  .dimension(leDim)
+  .group(leDimGroup)
+  .ordering(kv => kv.key) /* Orders by value otherwise */
+  .label(d => {
+    let label = d.key;
+    if (leChart.hasFilter() && !leChart.hasFilter(d.key)) {
+      return `${label} 0%`
+    }
+    const full = all.value();
+    if (full) {
+      label += ` ${(d.value / full * 100).toFixed(1)}%`;
+    }
+    return label
+  });
+
+leChart.render();
+
+var ssChart = new dc.PieChart("#ssChart")
+ssChart
+  .width(200)
+  .height(200)
+  .dimension(selfSignedDim)
+  .group(selfSignedGroup)
+  .ordering(kv => kv.key) /* Orders by value otherwise */
+  .minAngleForLabel(0)
+  .label(d => {
+    let label = d.key;
+    if (ssChart.hasFilter() && !ssChart.hasFilter(d.key)) {
+      return `${label} 0%`
+    }
+    const full = all.value();
+    if (full) {
+      label += ` ${(d.value / full * 100).toFixed(1)}%`;
+    }
+    return label
+  });
+
+ssChart.render();
+
+const totalCount = new dc.NumberDisplay("#total")
+totalCount
+  .group(all)
+  .valueAccessor(x => x)
+  .formatNumber(d3.format("d"));
+totalCount.render()
+
+const ocspCount = new dc.NumberDisplay("#ocsp")
+ocspCount
+  .group(ocsp)
+  .valueAccessor(x => x)
+  .formatNumber(d3.format("d"));
+ocspCount.render()
+
+const validityChart = new dc.BarChart("#validity");
+validityChart
+  .width(800)
+  .height(300)
+  .margins({left: 55, top: 20, right: 10, bottom: 40})
+  .clipPadding(20)
+  .x(d3.scaleLinear([0, 400], [0, 400]))
+  .xUnits((start, end) => Math.round((end - start) / 20))
+  .xAxisLabel("Validity days [n,n+20)")
+  .yAxisLabel("Certificates")
+  .elasticY(true)
+  .dimension(validityDim)
+  .group(validityDimGroup);
+
+validityChart.render();
+
+const sanMax = new dc.NumberDisplay("#san-max")
+sanMax
+  .group(maxSanGroupAll)
+  .valueAccessor(x => x.maxSan)
+  .formatNumber(d3.format("d"));
+sanMax.render()
+
+const sanAvg = new dc.NumberDisplay("#san-avg")
+sanAvg
+  .group(avgSanGroupAll)
+  .valueAccessor(x => x.avg)
+  .formatNumber(d3.format(".2f"));
+sanAvg.render()
+
+
+</script>
+
+</body>
