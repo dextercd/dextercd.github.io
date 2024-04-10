@@ -1,0 +1,74 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Certificate Survey | DD</title>
+
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/code-highlight.css" rel="stylesheet">
+<link href="/static/css/dexsite.css" rel="stylesheet">
+
+
+
+<meta name="description" content="TLS Certificate scraping project.">
+<meta name="author" content="Dexter Castor Döpping">
+<meta name="keywords" content="Certificates, TLS, Python, Pandas">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/index.html">DD</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-main">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a>
+        <li class="nav-item"><a class="nav-link" href="/about.html">About</a>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container mt-2">
+
+
+
+<article class="blog-post" lang="en">
+<h1>Certificate Survey</h1>
+<div class="post-info" lang="en">
+    <span class="post-info-item"><strong>By</strong>: Dexter Castor Döpping</span>
+    <span class="post-info-item"><strong>Published</strong>: 2024-04-08</span>
+</div>
+
+<p>You can find the dashboard here: <a href="https://dexter.döpping.eu/certificate-survey">https://dexter.döpping.eu/certificate-survey</a>.</p>
+<p>I downloaded over one million TLS certificates from the internet and built a data dashboard for them. It's pretty interesting to see the variety of signature, key algorithms, key lengths, etc..</p>
+<p>It's fun to see how dominant Let's Encrypt is, over 50% of the domains in the open pagerank list I used have a Let's Encrypt certificate.</p>
+<p>OCSP Must-Staple is very rarely used. It's an already niche security feature with possible downsides for service reliability, which I guess makes it not very popular.</p>
+<p>Also surprised how high the average SAN entry count is per certificate.
+The vast majority of certificates are only valid for one or two domains, but a fraction of certificates have a ton of domains and that pulls the average up. </p>
+</article>
+
+
+
+</main>
+
+<footer class="py-3 my-4">
+  <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+    <li class="nav-item"><a href="/index.html" class="nav-link px-2 text-muted">Home</a></li>
+    <li class="nav-item"><a href="/about.html" class="nav-link px-2 text-muted">About</a></li>
+  </ul>
+  <p class="text-center text-muted">Dexter Castor Döpping</p>
+</footer>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
