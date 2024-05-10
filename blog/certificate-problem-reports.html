@@ -1,0 +1,101 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Certificate Problem Reports | DD</title>
+
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/code-highlight.css" rel="stylesheet">
+<link href="/static/css/dexsite.css" rel="stylesheet">
+
+
+
+<meta name="description" content="I ran into a couple x509 certificates that had issues.">
+<meta name="author" content="Dexter Castor Döpping">
+<meta name="keywords" content="Certificates, TLS, CPR">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/index.html">DD</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-main">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a>
+        <li class="nav-item"><a class="nav-link" href="/about.html">About</a>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container mt-2">
+
+
+
+<article class="blog-post" lang="en">
+<h1>Certificate Problem Reports</h1>
+<div class="post-info" lang="en">
+    <span class="post-info-item"><strong>By</strong>: Dexter Castor Döpping</span>
+    <span class="post-info-item"><strong>Published</strong>: 2024-04-25</span>
+</div>
+
+<p>After learning a bit about EV certificates I decided to check out a few and see what they contain in the registration number field.
+It was very confusing when the first EV registration number I looked at,
+one used by rabobank[.]nl,
+couldn't be found in KVK's database (the Dutch organisation registry).</p>
+<p>After investigating some more,
+it turned out that the certificate contained an old KVK number that had been deregistered,
+making the certificate faulty.
+I reported this to the certificate authority who started investigating.</p>
+<h2 id="government-certificates">Government certificates</h2>
+<p>I happen to have downloaded over 1 million certificates for a different project and began looking through those for other certificates with bad registration numbers.
+Using this, I found a certificate used by noord-holland[.]nl with "Government Entity" as their registration number despite having a real registration number,
+which is not allowed according to the EV guidelines:</p>
+<blockquote>
+<p>For Government Entities that do not have a Registration Number or readily verifiable date of creation, the CA SHALL enter appropriate language to indicate that the Subject is a Government Entity. </p>
+</blockquote>
+<p>This was also reported to the respective certificate authority and they started their own investigation.</p>
+<h2 id="results">Results</h2>
+<p>Both CAs reported back that they agreed the certificate was mississued,
+had scheduled a revocation for the affected certificate,
+would investigate the root cause of the mississuance,
+and would see if other certificates were affected.</p>
+<p>133 certificates ended up getting revoked for Rabobank, and 27 certificates used by various Dutch government sites also had to be revoked.</p>
+<p>Since CAs depend on trust, these incident reports are public:</p>
+<ul>
+<li>Rabobank: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1891245">https://bugzilla.mozilla.org/show_bug.cgi?id=1891245</a></li>
+<li>Government Entities: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1891531">https://bugzilla.mozilla.org/show_bug.cgi?id=1891531</a> For this one, a discussion followed about the somewhat ambiguous wording in the requirements CAs are expected to follow.</li>
+</ul>
+<p>It was very interesting and encouraging to see how these, admittedly minor, issues got handled.</p>
+<p>All certificates were revoked within 5 days of discovery, and a very thorough root cause analysis was done by both CAs.</p>
+<p>It's also worth mentioning that the subscribers had to quickly replace their affected certificates.
+This doesn't always go well, but, from reading these incident reports,
+it wasn't a problem here. So, they definitely deserve praise too.</p>
+<p><img alt='Cropped crt.sh image containing in red text "Revoked (privilegeWithdrawn)"' src="/static/img/rabocert.png"/></p>
+</article>
+
+
+
+</main>
+
+<footer class="py-3 my-4">
+  <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+    <li class="nav-item"><a href="/index.html" class="nav-link px-2 text-muted">Home</a></li>
+    <li class="nav-item"><a href="/about.html" class="nav-link px-2 text-muted">About</a></li>
+  </ul>
+  <p class="text-center text-muted">Dexter Castor Döpping</p>
+</footer>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

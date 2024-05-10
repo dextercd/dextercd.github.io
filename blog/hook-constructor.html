@@ -68,45 +68,45 @@ The constructor must return the <code>this</code> pointer.</p>
 <p>VC++ does not allow you to specify the <code>__thiscall</code> calling convention on non-member functions, but that's pretty easy to work around.
 Write a class and add a member function to it. This member function can then be used to replace the original constructor.</p>
 <p>Imagine that our imaginary game uses the following class:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Player</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health_points</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">weapon_rank</span><span class="p">;</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Player</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health_points</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">weapon_rank</span><span class="p">;</span>
 
-<span class="k">public</span><span class="o">:</span><span class="w"></span>
+<span class="k">public</span><span class="o">:</span>
 <span class="w">    </span><span class="c1">// Constructor</span>
-<span class="w">    </span><span class="n">Player</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="n">health_points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">level</span><span class="p">;</span><span class="w"></span>
-<span class="w">        </span><span class="n">weapon_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">level</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="n">Player</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="n">health_points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">level</span><span class="p">;</span>
+<span class="w">        </span><span class="n">weapon_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">level</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
 
 <span class="w">    </span><span class="c1">// ... rest ...</span>
-<span class="p">};</span><span class="w"></span>
+<span class="p">};</span>
 </code></pre></div>
 <p>The health points and weapon rank correspond directly to the player's level.
 We want to have some fun and change this,
 so we hook the constructor by writing a compatible class in our DLL with a member function that mirrors the constructor's interface:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">HackedPlayer</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health_points</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">weapon_rank</span><span class="p">;</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">HackedPlayer</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health_points</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">weapon_rank</span><span class="p">;</span>
 
-<span class="w">    </span><span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="nf">constructor</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="n">health_points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100'000'000</span><span class="p">;</span><span class="w"></span>
-<span class="w">        </span><span class="n">weapon_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">9001</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="nf">constructor</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="n">health_points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100'000'000</span><span class="p">;</span>
+<span class="w">        </span><span class="n">weapon_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">9001</span><span class="p">;</span>
 
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">};</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
 
-<span class="kt">void</span><span class="w"> </span><span class="nf">install_hooks</span><span class="p">()</span><span class="w"></span>
-<span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="n">MH_CreateHook</span><span class="p">(</span><span class="w"></span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">install_hooks</span><span class="p">()</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="n">MH_CreateHook</span><span class="p">(</span>
 <span class="w">        </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="mh">0x0059cf20</span><span class="p">,</span><span class="w"> </span><span class="c1">// We know the original constructor is located here</span>
-<span class="w">        </span><span class="n">memfn_voidp</span><span class="p">(</span><span class="o">&amp;</span><span class="n">HackedPlayer</span><span class="o">::</span><span class="n">constructor</span><span class="p">),</span><span class="w"></span>
-<span class="w">        </span><span class="k">nullptr</span><span class="w"></span>
-<span class="w">    </span><span class="p">);</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="n">memfn_voidp</span><span class="p">(</span><span class="o">&amp;</span><span class="n">HackedPlayer</span><span class="o">::</span><span class="n">constructor</span><span class="p">),</span>
+<span class="w">        </span><span class="k">nullptr</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="p">}</span>
 </code></pre></div>
 <p>Now when we run the game, inject the DLL, and install our hooks,
 the player won't be initialised using its constructor,
@@ -115,36 +115,36 @@ We've changed the rules of the game 😎.</p>
 <h2 id="problems">Problems..</h2>
 <p>The example I gave was very simplified. It actually works, but in most games classes are much more complicated than that.
 Imagine if the class contains a <code>std::string</code>:</p>
-<div class="codehilite"><pre><span></span><code><span class="w"> </span>class Player {<span class="w"></span>
-<span class="w"> </span>    int health_points;<span class="w"></span>
-<span class="w"> </span>    int weapon_rank;<span class="w"></span>
-<span class="gi">+    std::string name;</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="w"> </span>class Player {
+<span class="w"> </span>    int health_points;
+<span class="w"> </span>    int weapon_rank;
+<span class="gi">+    std::string name;</span>
 
-<span class="w"> </span>public:<span class="w"></span>
-<span class="w"> </span>    // Constructor<span class="w"></span>
-<span class="gi">+    Player(int level, std::string given_name)</span><span class="w"></span>
-<span class="w"> </span>    {<span class="w"></span>
-<span class="w"> </span>        health_points = 20 * level;<span class="w"></span>
-<span class="w"> </span>        weapon_rank = level;<span class="w"></span>
-<span class="gi">+        name = given_name;</span><span class="w"></span>
-<span class="w"> </span>    }<span class="w"></span>
-<span class="w"> </span>}<span class="w"></span>
+<span class="w"> </span>public:
+<span class="w"> </span>    // Constructor
+<span class="gi">+    Player(int level, std::string given_name)</span>
+<span class="w"> </span>    {
+<span class="w"> </span>        health_points = 20 * level;
+<span class="w"> </span>        weapon_rank = level;
+<span class="gi">+        name = given_name;</span>
+<span class="w"> </span>    }
+<span class="w"> </span>}
 </code></pre></div>
 <p>We add the <code>std::string</code> to our <code>HackedPlayer</code> and assign to it just like the original constructor does:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">HackedPlayer</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health_points</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">weapon_rank</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">name</span><span class="p">;</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="k">struct</span><span class="w"> </span><span class="nc">HackedPlayer</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">health_points</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">weapon_rank</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
 
-<span class="w">    </span><span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="nf">constructor</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">given_name</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="n">health_points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100'000'000</span><span class="p">;</span><span class="w"></span>
-<span class="w">        </span><span class="n">weapon_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">9001</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="nf">constructor</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">given_name</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="n">health_points</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100'000'000</span><span class="p">;</span>
+<span class="w">        </span><span class="n">weapon_rank</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">9001</span><span class="p">;</span>
 <span class="w">        </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">given_name</span><span class="p">;</span><span class="w">  </span><span class="c1">// We added this line, what could go wrong? :^)</span>
 
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">;</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">};</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
 </code></pre></div>
 <p>It appears like not much changed, but actually, if you try this new example you'll find that the program now crashes!
 Somehow the function we replaced the constructor with is no longer compatible.
@@ -175,21 +175,21 @@ but here we're using a member function (for the <code>__thiscall</code> calling 
 which makes it slightly more difficult.
 Unlike a free function, you can't cast a member function to <code>void*</code> directly,
 instead you must use a helper function such as <code>memfn_voidp</code>:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span><span class="w"> </span><span class="nc">MemFn</span><span class="o">&gt;</span><span class="w"></span>
-<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">memfn_voidp</span><span class="p">(</span><span class="n">MemFn</span><span class="w"> </span><span class="n">memfn</span><span class="p">)</span><span class="w"></span>
-<span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">void</span><span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">memfn</span><span class="p">;</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span><span class="w"> </span><span class="nc">MemFn</span><span class="o">&gt;</span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">memfn_voidp</span><span class="p">(</span><span class="n">MemFn</span><span class="w"> </span><span class="n">memfn</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">void</span><span class="o">**</span><span class="p">)</span><span class="o">&amp;</span><span class="n">memfn</span><span class="p">;</span>
+<span class="p">}</span>
 </code></pre></div>
 <p>This is just a trick you have to know about and use.
 I got this trick from a <a href="https://github.com/microsoft/Detours/blob/734ac64899c44933151c1335f6ef54a590219221/samples/member/member.cpp#L16-L19">comment in the Microsoft Detours library</a> :^).</p>
 <p>Alright, so it's slightly more difficult when you hook using a member functions opposed to a free function.
 What about using a constructor? Well.. it's pretty much impossible:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">MH_CreateHook</span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="mh">0x0059cf20</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="n">memfn_voidp</span><span class="p">(</span><span class="o">&amp;</span><span class="n">HackedPlayer</span><span class="o">::</span><span class="n">HackedPlayer</span><span class="p">),</span><span class="w"></span>
-<span class="w">    </span><span class="k">nullptr</span><span class="w"></span>
-<span class="p">);</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="n">MH_CreateHook</span><span class="p">(</span>
+<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="mh">0x0059cf20</span><span class="p">,</span>
+<span class="w">    </span><span class="n">memfn_voidp</span><span class="p">(</span><span class="o">&amp;</span><span class="n">HackedPlayer</span><span class="o">::</span><span class="n">HackedPlayer</span><span class="p">),</span>
+<span class="w">    </span><span class="k">nullptr</span>
+<span class="p">);</span>
 <span class="c1">// Results in compiler error:</span>
 <span class="c1">// error C2277: 'HackedPlayer::{ctor}': cannot take address of this member function</span>
 </code></pre></div>
@@ -214,11 +214,11 @@ We will need to write some assembly code, that way we are not held back by this 
 I'm not all that familiar with writing assembly, so I want to make this as easy as possible for myself,
 the x86 assembly code should call back into C++ as soon as possible.</p>
 <p>Let's actually start with that C++ code:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="kr">__stdcall</span><span class="w"></span>
-<span class="n">construct_HackedPlayer</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">given_name</span><span class="p">)</span><span class="w"></span>
-<span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="n">HackedPlayer</span><span class="p">(</span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">given_name</span><span class="p">);</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="kr">__stdcall</span>
+<span class="n">construct_HackedPlayer</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">given_name</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="n">HackedPlayer</span><span class="p">(</span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">given_name</span><span class="p">);</span>
+<span class="p">}</span>
 </code></pre></div>
 <p>Pretty simple, we use placement <code>new</code> to immediately invoke the constructor.
 We return the <code>this</code> pointer which follows how the constructor is supposed to work,
@@ -230,23 +230,23 @@ but on top of the stack with <code>__stdcall</code>.
 This means that our assembly code (which will be invoked using the <code>__thiscall</code> convention)
 only has to convert the call into <code>__stdcall</code> and invoke this C++ function.</p>
 <p>We do this by putting the <code>ecx</code> register onto the stack, being careful to preserve the return address:</p>
-<div class="codehilite"><pre><span></span><code><span class="kr">__declspec</span><span class="p">(</span><span class="kr">naked</span><span class="p">)</span><span class="w"></span>
-<span class="kr">__declspec</span><span class="p">(</span><span class="n">noinline</span><span class="p">)</span><span class="w"></span>
-<span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="n">thiscall_shim</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">given_name</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span><span class="w"></span>
-<span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kr">__asm</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="n">xchg</span><span class="w"> </span><span class="n">ecx</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">esp</span><span class="p">]</span><span class="w"></span>
-<span class="w">        </span><span class="n">push</span><span class="w"> </span><span class="n">ecx</span><span class="w"></span>
-<span class="w">        </span><span class="n">jmp</span><span class="w"> </span><span class="n">construct_HackedPlayer</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="kr">__declspec</span><span class="p">(</span><span class="kr">naked</span><span class="p">)</span>
+<span class="kr">__declspec</span><span class="p">(</span><span class="n">noinline</span><span class="p">)</span>
+<span class="n">HackedPlayer</span><span class="o">*</span><span class="w"> </span><span class="n">thiscall_shim</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">given_name</span><span class="p">)</span><span class="w"> </span><span class="k">noexcept</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="kr">__asm</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">xchg</span><span class="w"> </span><span class="n">ecx</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="n">esp</span><span class="p">]</span>
+<span class="w">        </span><span class="n">push</span><span class="w"> </span><span class="n">ecx</span>
+<span class="w">        </span><span class="n">jmp</span><span class="w"> </span><span class="n">construct_HackedPlayer</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div>
 <p>Now we install this shim, and hopefully everything works:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">MH_CreateHook</span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="mh">0x0059cf20</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="n">thiscall_shim</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="k">nullptr</span><span class="w"></span>
-<span class="p">);</span><span class="w"></span>
+<div class="codehilite"><pre><span></span><code><span class="n">MH_CreateHook</span><span class="p">(</span>
+<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="mh">0x0059cf20</span><span class="p">,</span>
+<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="n">thiscall_shim</span><span class="p">,</span>
+<span class="w">    </span><span class="k">nullptr</span>
+<span class="p">);</span>
 </code></pre></div>
 <p>And yes, it works! Despite being at level one,
 I have one hundred million health points and a weapon rank over 9000!</p>
