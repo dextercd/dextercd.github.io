@@ -1,0 +1,140 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Developing for the Game Boy Color in 2024 | DD</title>
+
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/code-highlight.css" rel="stylesheet">
+<link href="/static/css/dexsite.css" rel="stylesheet">
+
+
+
+<meta name="description" content="Making a small program for the Game Boy Color in 2024.">
+<meta name="author" content="Dexter Castor Döpping">
+<meta name="keywords" content="Game Boy, Assembly">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/index.html">DD</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-main">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a>
+        <li class="nav-item"><a class="nav-link" href="/about.html">About</a>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container mt-2">
+
+
+
+<article class="blog-post" lang="en">
+<h1>Developing for the Game Boy Color in 2024</h1>
+<div class="post-info" lang="en">
+    <span class="post-info-item"><strong>By</strong>: Dexter Castor Döpping</span>
+    <span class="post-info-item"><strong>Published</strong>: 2024-08-25</span>
+</div>
+
+<p>This July I developed a small program for the Game Boy Color.
+Nothing too complicated it just shows a small animation and plays a sound.
+It's basically trying to pretend to be a custom bootscreen.</p>
+<p>I wrote it in Game Boy assembler using the <a href="https://github.com/gbdev/rgbds">RGBDS</a> toolchain.</p>
+<p>It was a lot of fun but also very tedious.
+I have a huge amount of respect for the original developers for the Game Boy.
+The people that made Pokémon and Tetris are magicians.</p>
+<h2 id="tools">Tools</h2>
+<p>For assembling and linking I used RGBDS,
+then GIMP to create PNGs with indexed colours,
+and finally Python to generate a sine wave lookup table for doing some maths inside the assembly code.</p>
+<p>I used a Makefile to invoke these tools in the right order and launch the final binary in Gearboy: a Game Boy emulator.</p>
+<p>An emulator is essential because it gives you a fast feedback loop during development,
+but it doesn't remove the need to test on real hardware.
+The first time I tried my program on a real Game Boy half the graphics were missing; it took me a while to figure out why.</p>
+<h2 id="vram">VRAM</h2>
+<p>One thing that tripped me up is that you can't access VRAM at certain times.
+To get around this I wrote the data to general purpose memory and then copied it over to VRAM when I knew it was safe to do so ("Shadow OAM").
+This worked fine on the emulator but breaks on real hardware because there isn't actually enough time to copy the memory over.
+Even if you start copying as soon as it's safe to do so, you won't finish before your time is up;
+the Game Boy is just that slow.</p>
+<p>The solution is to use a special command to copy a block of memory in just 160 clock cycles (Start DMA).
+Issue is, you can't access normal memory while the command is doing work which is where your code is normally stored.
+You need to place the code that invokes the command into a special region of memory that stays available during the copy.</p>
+<p>After applying this and some other fixes the code successfully ran on real hardware.</p>
+<h2 id="gb-assembly">GB Assembly</h2>
+<p>The Game Boy system is very limited:
+something that would be easy in most other systems, positioning sprites into a flag shape, becomes complicated;
+requiring 44 lines of assembly.</p>
+<p>This is primarily because of the low register count. You only get five of them: <code>a</code>, <code>b</code>, <code>c</code>, <code>d</code>, <code>hl</code>.</p>
+<p><code>hl</code> allows you to reference memory locations and with <code>a</code> you can do some basic arithmetic.
+The other registers are very limited so you end up constantly moving stuff in and out of <code>a</code>.</p>
+<h2 id="result">Result</h2>
+<p>I'm happy with the final result.
+It shows a <a href="https://noita.wiki.gg/wiki/H%C3%A4mis">Hämis</a> from Noita, scrolling up, and holding an animating flag.
+At the end of the scrolling it plays two notes.</p>
+<p>You can check out the source code on my GitHub: <a href="https://github.com/dextercd/hamis.gbc/blob/HEAD/hamis.asm">hamis.asm</a>.</p>
+<p>Run it inside your browser! Powered by <a href="https://github.com/riperiperi">riperiperi/amebo</a>.</p>
+<p><div id="hamis-gbc" style="position:relative;width:322px;height:290px;border:1px solid"><canvas height="288" width="320"></canvas></div></p>
+<video controls="" height="530" width="640">
+<source src="/static/video/ghc.mp4" type="video/mp4"/>
+</video>
+<h2 id="learning-materials">Learning materials</h2>
+<p>The following resources were helpful to me when learning about Game Boy dev:</p>
+<ul>
+<li><a href="https://gbdev.io/gb-asm-tutorial/">https://gbdev.io/gb-asm-tutorial/</a></li>
+<li><a href="https://gbdev.io/pandocs/">https://gbdev.io/pandocs/</a></li>
+<li><a href="https://github.com/pret/pokecrystal/wiki/Optimizing-assembly-code">https://github.com/pret/pokecrystal/wiki/Optimizing-assembly-code</a></li>
+<li>RGBDS man pages: gbz80(7), rgbasm(1), rgbgfx(1), rgblink(1)</li>
+</ul>
+<script src="/static/js/amebo.js"></script><script>let last = arr => arr[arr.length-1]
+let f_ = ["/static/gb/hamis.gbc"]
+let i_ = ["hamis-gbc"]
+for (let i=0; i!= 1; ++i) {
+    let f = f_[i]
+    let n = last(f.split("/"))
+    let el = document.getElementById(i_[i]);
+    let b = document.createElement("button")
+    b.type = "button"
+    b.style.position = "absolute"
+    b.style.left = "50%"
+    b.style.top = "50%"
+    b.style.transform = "translate(-50%,-50%)"
+    b.innerText = `Run ${n}`
+    b.onclick = () => {
+        b.remove()
+        let c = el.firstChild;
+        let g = new gb(f_[i], c)
+    }
+    el.append(b)
+}
+</script>
+</article>
+
+
+
+</main>
+
+<footer class="py-3 my-4">
+  <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+    <li class="nav-item"><a href="/index.html" class="nav-link px-2 text-muted">Home</a></li>
+    <li class="nav-item"><a href="/about.html" class="nav-link px-2 text-muted">About</a></li>
+  </ul>
+  <p class="text-center text-muted">Dexter Castor Döpping</p>
+</footer>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
