@@ -1,0 +1,74 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lua Share | DD</title>
+
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/code-highlight.css" rel="stylesheet">
+<link href="/static/css/dexsite.css" rel="stylesheet">
+
+
+
+<meta name="description" content="Website for running and sharing Lua code">
+<meta name="author" content="Dexter Castor Döpping">
+<meta name="keywords" content="C++, WebAssembly, Lua">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/index.html">DD</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-main">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a>
+        <li class="nav-item"><a class="nav-link" href="/about.html">About</a>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container mt-2">
+
+
+
+<article class="blog-post" lang="en">
+<h1>Lua Share</h1>
+<div class="post-info" lang="en">
+    <span class="post-info-item"><strong>By</strong>: Dexter Castor Döpping</span>
+    <span class="post-info-item"><strong>Published</strong>: 2024-12-24</span>
+</div>
+
+<p>I made a new website for running and sharing Lua code: <a href="https://dexter.xn--dpping-wxa.eu/lua-share/">https://dexter.döpping.eu/lua-share/</a></p>
+<p>The Lua code is run directly in the browser via WebAssembly.</p>
+<p>It generates permalinks using a custom compression scheme, combining a Lua preprocessing step with LZMA warmed up with a 18.7KB preset dictionary. The compression is pretty good but URLs still tend to get quite long.</p>
+<p>Since I made the site, I'll do the honors of sharing the first Lua snippet:
+<a href="https://dexter.döpping.eu/lua-share/#0QAHljZwGEa/HTr6KGdRXSkNahAfQEE2JoVkV01fg/tCoRIlLEV8I/NFQCllWb8wZQWasEDefqUKMCPvivv1jrkEmhGkUb+K8mlmdJ2WDuYB+SYCPEHr3VmtMRPmsw8uNtFuUwCFws3ZYG4n85oL3UKXKWg">Sine wave</a></p>
+<p>Tip: You can use CTRL+Enter to activate the 'Run' button.</p>
+</article>
+
+
+
+</main>
+
+<footer class="py-3 my-4">
+  <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+    <li class="nav-item"><a href="/index.html" class="nav-link px-2 text-muted">Home</a></li>
+    <li class="nav-item"><a href="/about.html" class="nav-link px-2 text-muted">About</a></li>
+  </ul>
+  <p class="text-center text-muted">Dexter Castor Döpping</p>
+</footer>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
