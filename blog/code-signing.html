@@ -87,7 +87,7 @@ Anecdotally, this appears to be true.
 The programs I tested were only marked by a couple AVs as malicious,
 but adding a signature to the file made some (and sometimes all) findings go away.
 Even using a self-signed certificate seems to help a bit, which is silly.</p>
-<p>Window displays a scary popup (SmartScreen) when you run a program downloaded from the internet.
+<p>Windows displays a scary popup (SmartScreen) when you run a program downloaded from the internet.
 Windows stops showing this screen once the program has built up enough reputation.
 A certificate lets you carry this reputation over to new versions of the same program or to entirely different programs.</p>
 <h2 id="purchasing-a-certificate">Purchasing a Certificate</h2>
@@ -170,7 +170,7 @@ I didn't check further back than that.</p>
 <h2 id="validation-process">Validation Process</h2>
 <p>A certificate has to mean <em>something</em>.
 In the case of IV certificates,
-they should give you a reasonable assurance that the person listed in the certificate real person and the one that actually requested the certificate.</p>
+they should give you a reasonable assurance that the person listed in the certificate is a real person and the one that actually requested the certificate.</p>
 <p>In other words, CAs need to guard against identity fabrication and impersonation before handing out a certificate.</p>
 <p>I ended up providing HARICA the following information:</p>
 <ul>
