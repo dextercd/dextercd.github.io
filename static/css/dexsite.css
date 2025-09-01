@@ -27,6 +27,16 @@ main {
 .blog-post img {
     max-height: 300px;
     max-width: 100%;
+
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+
+    &.full-image {
+        width: 100%;
+        height: auto;
+        max-height: none;
+    }
 }
 
 .post-info {
@@ -46,4 +56,23 @@ a.blog-preview {
     text-decoration: none;
     color: var(--bs-body-color);
     margin-top: 20px;
+}
+
+details {
+    border: 1px solid black;
+    border-radius: 10px;
+    padding: 5px 15px;
+    margin-bottom: 1rem;
+
+    & :last-child {
+        margin-bottom: 0;
+    }
+}
+
+.codehilite {
+    border-radius: 10px;
+
+    pre {
+        padding: 10px;
+    }
 }

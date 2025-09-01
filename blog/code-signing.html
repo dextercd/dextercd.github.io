@@ -1,0 +1,455 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Code Signing as an Individual Developer | DD</title>
+
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/code-highlight.css" rel="stylesheet">
+<link href="/static/css/dexsite.css" rel="stylesheet">
+
+
+
+<meta name="description" content="Getting and using a code signing certificate as an individual developer.">
+<meta name="author" content="Dexter Castor Döpping">
+<meta name="keywords" content="Certificates, Code">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/index.html">DD</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-main">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a>
+        <li class="nav-item"><a class="nav-link" href="/about.html">About</a>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container mt-2">
+
+
+
+<article class="blog-post" lang="en">
+<h1>Code Signing as an Individual Developer</h1>
+<div class="post-info" lang="en">
+    <span class="post-info-item"><strong>By</strong>: Dexter Castor Döpping</span>
+    <span class="post-info-item"><strong>Published</strong>: 2025-09-01</span>
+</div>
+
+<p>I've created several C++ projects in my free time that compile down to Windows .EXEs and .DLLs.
+These binaries have always been unsigned which hasn't been <em>too</em> much of an issue.
+However, occasionally antivirus software decides to eat the files after someone downloads them.</p>
+<p>That's weird, since I'm very certain my software doesn't contain viruses:</p>
+<ul>
+<li>I definitely didn't add any myself.</li>
+<li>There's nothing weird running on my computer. I don't download sketchy, pirated software.</li>
+<li>Most of my programs have few dependencies, and I check projects before integrating them into my code.</li>
+<li>Most AVs <em>don't</em> think the code is a virus. It's just the occasional AV that "detects" something bad.</li>
+</ul>
+<p><img alt='Screenshot of Windows Defender where it blocked something classified as "Wacatac" malware.' src="/static/img/defender_fp.png"/></p>
+<details>
+<summary>🚨 Rant incoming 🚨</summary>
+<p>This is really frustrating.
+I've ended up in conversations where people think they've uncovered some big conspiracy
+where I'm secretly infecting people's computers with my evil software.</p>
+<p>The last couple of times this has happened, I just said
+"Well if you still don't trust it then you shouldn't run the code. It's good to be careful if you're unsure".
+Somehow, that's better at convincing people it's safe than trying to explain what a false positive is.</p>
+<p>These folks often use VirusTotal without understanding what it is or how it works.
+AV companies participate in VirusTotal so they get access to the many potentially malicious programs that are uploaded there.
+In exchange for receiving these files, AV companies return the result of scanning the file with their software.
+However, these companies often configure their software with experimental parameters and detection methods, meaning they may have more false positives.</p>
+<p>That's not to say that VirusTotal isn't useful, but it's just a starting point.
+Just because 10 AV products — that are often reusing each other's engines and that you might've never even heard of — say it's malicious doesn't mean it's true.</p>
+<p>There's muuuuuch more I could say, but it's probably time to move on to the main topic.</p>
+</details>
+<h2 id="why-sign-your-code">Why Sign Your Code?</h2>
+<p>When a program is signed with a certificate,
+it proofs that it was published by someone with control over the private key.
+Normally the entity described in the certificate is the same one that controls the key;
+otherwise, you have what's called an "incident". :-)</p>
+<p>Assuming no key compromises, this makes it easy for people to verify where the software came from
+and that it hasn't stealthily been changed by someone (since that would invalidate the signature).</p>
+<p>According to the internet™, whether program is signed may be used by AVs as an indicator of the file's trustworthiness.
+Anecdotally, this appears to be true.
+The programs I tested were only marked by a couple AVs as malicious,
+but adding a signature to the file made some (and sometimes all) findings go away.
+Even using a self-signed certificate seems to help a bit, which is silly.</p>
+<p>Window displays a scary popup (SmartScreen) when you run a program downloaded from the internet.
+Windows stops showing this screen once the program has built up enough reputation.
+A certificate lets you carry this reputation over to new versions of the same program or to entirely different programs.</p>
+<h2 id="purchasing-a-certificate">Purchasing a Certificate</h2>
+<p>Because of the potential benefit with antivirus scans and a general interest in learning more about digital certificates,
+I decided to look for a place to buy a code signing certificate from.</p>
+<p>My criteria were:</p>
+<ul>
+<li>An IV (Individual Validated) certificate, no organisation or extended validation</li>
+<li>Reasonably priced</li>
+<li>No difficult/confusing restrictions</li>
+<li>Good support</li>
+</ul>
+<p>The following options were seriously considered:</p>
+<details>
+<summary>These are the options I didn't go with</summary>
+<h3 id="certum">Certum</h3>
+<ul>
+<li>Affordable.</li>
+<li>Code must be "Open Source" for their most affordable tier?</li>
+<li>You don't get a private key on a hardware token, but instead you get access to a code signing service.<ul>
+<li>This can be really helpful if you want to sign code in CI environments.</li>
+<li>Reasonable limits: 5000 signature per month.</li>
+</ul>
+</li>
+</ul>
+<p>This feels like the right choice for many projects,
+but I want to be able to sign code without having to worry about whether or not it counts as "Open Source".</p>
+<h3 id="sslcom">SSL.com</h3>
+<ul>
+<li>Hardware token and Cloud Signing option.<ul>
+<li>Hardware token is quite expensive.</li>
+<li>Cloud signing option is also quite expensive with low signature limits.<ul>
+<li>Unused signatures do roll over each month; so maybe it's not too bad.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="sectigo">Sectigo</h3>
+<p>Sectigo listed a $79 price point on their site for IV certs, but, when I inquired about this, it turned out to be outdated information.
+They increased their prices after storing the key on a hardware token became an industry requirement for every type of code signing certificates and not just EVs.</p>
+<p>Sectigo updated their site and offered a discount code for my troubles — which was appreciated —
+but I decided to keep looking for other options.</p>
+<h3 id="digicert">DigiCert</h3>
+<p>It doesn't look like DigiCert offers IV certificates.</p>
+<h3 id="azure">Azure</h3>
+<p>Azure has a service called "Trusted Signing" which let's you sign code with keys managed by Azure.</p>
+<p>Their prices seem reasonable and this was a top contender — except that it's no longer available in my region.
+The service is still in public preview and at some point they decided to limit it to customers located in North-America.</p>
+<p>Unfortunate, but I might give them another look later, once they restore service in Europe.</p>
+</details>
+<h3 id="harica">HARICA</h3>
+<ul>
+<li>Affordable.</li>
+<li>You receive the key on a hardware token.<ul>
+<li>This means there aren't any signing restrictions, e.g., must be open source or only X signatures per month.</li>
+<li>But it is more difficult to use in CI environments.</li>
+</ul>
+</li>
+<li>I had a good experience with their support team when I asked a couple questions.</li>
+</ul>
+<p>Despite the challenges of using a hardware token in CI environments,
+this is the CA I picked.</p>
+<p>The certificate ended up costing €68.2 and the hardware token was €49.6 for a grand total of €117.8.</p>
+<p>The hardware token is reusable; it contains four keys (two RSA + two EC) and HARICA allows each key to be used for 10 years.
+So, potentially, you can use the same token for forty years.
+That's assuming you want to use both key types and that the hardware token keeps up with developing PKI standards.</p>
+<p>I would not expect the hardware token to last that long in practice.
+Still, the token will last many years and you get up to a 30% discount if you buy a certificate for multiple years in advance.
+Altogether, code signing is probably less expensive than many people think it is.</p>
+<details>
+<summary>Typo on their homepage</summary>
+<p>Two times I pointed out to their support team that their homepage has a typo.</p>
+<p>Strangely enough, they never acknowledged this, and the typo is still there.
+I checked with the Wayback machine and it's been that way since at least January 2024.
+I didn't check further back than that.</p>
+<p><img alt='Screenshot of the HARICA website. It show a button containing the text "Get yout Server Certificate"' src="/static/img/harica-typo.png"/></p>
+<p>It's not a big deal, but it does seem weird.</p>
+</details>
+<h2 id="validation-process">Validation Process</h2>
+<p>A certificate has to mean <em>something</em>.
+In the case of IV certificates,
+they should give you a reasonable assurance that the person listed in the certificate real person and the one that actually requested the certificate.</p>
+<p>In other words, CAs need to guard against identity fabrication and impersonation before handing out a certificate.</p>
+<p>I ended up providing HARICA the following information:</p>
+<ul>
+<li>Scans of my ID</li>
+<li>Photo of myself holding my ID</li>
+<li>Government document containing my address</li>
+</ul>
+<p>Except for an annoying digital hiccup, things went smoothly and I received confirmation that the hardware token was on its way.
+Once it arrived, I sent the support team a validation code and they in turn sent back the token's PIN and PUK codes (which I've changed).</p>
+<p>HARICA gave instructions for how to load the certificate onto the hardware token.
+The software they tell you to use runs on:</p>
+<ul>
+<li>Windows</li>
+<li>MacOS</li>
+<li>Linux<ul>
+<li>CentOS 8/9 (.rpm)</li>
+<li>Ubuntu 20/22 (.deb)</li>
+</ul>
+</li>
+</ul>
+<p>For a brief moment, I considered extracting the .deb archive to try and run it on my Arch Linux machine or maybe inside a custom Flatpak application package.
+Eventually I came to my senses and decided to spare myself (and HARICA's support team) the inevitable headache.</p>
+<p>A couple CLI commands later, I had an Ubuntu VM running via libvirt and installed the application there.
+After shutting down <code>pcscd.service</code> on the host machine, I was able to attach the hardware token to the VM and run the setup application.</p>
+<h2 id="the-certificate">The Certificate</h2>
+<p>Finally I have the hardware token set up,
+but what does the certificate actually look like?</p>
+<p>Well, it's an X.509 certificate with 'Code Signing' set in the extended key usage extension.
+The issuer is 'Hellenic Academic and Research Institutions CA' also known as HARICA.
+The subject is me! it contains my country, province, <em>city</em>, and my full legal name.</p>
+<p>If you get an IV certificate,
+you <em>must</em> be comfortable with this information being publicly accessible.
+The certificate is attached to every program you sign and it's easy for people to view.</p>
+<details>
+<summary>OpenSSL formatted view of the certificate</summary>
+<div class="codehilite"><pre><span></span><code>Data:
+    Version: 3 (0x2)
+    Serial Number:
+        21:59:8a:71:4b:14:fb:f6:c4:39:02:c7:20:fa:d4:cd
+    Signature Algorithm: sha256WithRSAEncryption
+    Issuer: C=GR, O=Hellenic Academic and Research Institutions CA, CN=HARICA Code Signing RSA 2
+    Validity
+        Not Before: Aug 13 12:21:10 2025 GMT
+        Not After : Aug 13 12:21:10 2026 GMT
+    Subject: C=NL, ST=Noord-Holland, L=Purmerend, SN=Döpping, GN=Dexter Castor, CN=Dexter Castor Döpping
+    Subject Public Key Info:
+        Public Key Algorithm: rsaEncryption
+            Public-Key: (4096 bit)
+            Modulus:
+                00:9e:a5:f8:92:fa:49:4d:58:00:7d:1e:20:db:d7:
+                ac:6b:1f:e1:45:fb:c3:82:fb:23:e4:e9:69:e5:b7:
+                ad:07:93:f8:9c:d5:d4:60:d7:8d:53:e0:1f:47:04:
+                e6:d7:e0:24:c6:e0:94:66:68:85:16:bd:a7:8b:6c:
+                3d:01:0a:04:34:55:77:a0:42:89:ed:b4:72:a3:7c:
+                b6:07:fc:f1:05:93:38:c4:0d:85:ad:90:a3:11:d9:
+                f2:bc:be:a2:be:5f:c0:86:8a:6b:5c:68:fd:45:53:
+                3b:14:ec:2a:75:56:7a:b6:ed:e9:a5:76:c0:ba:05:
+                c1:df:e4:b6:77:11:38:41:ca:ed:26:c4:55:ef:ae:
+                41:b2:05:d9:60:20:c6:ad:51:9c:28:8f:84:94:7d:
+                38:c1:c0:79:66:a1:4d:ea:7f:0c:75:54:2f:59:36:
+                4a:52:fe:89:9c:62:b2:66:a7:b2:0f:61:bc:12:78:
+                01:c8:c6:ca:b4:b3:e4:20:a6:7f:ce:34:34:5c:1a:
+                e2:c9:58:5c:2a:98:39:c1:bb:ae:e5:3d:d8:f6:02:
+                4f:a1:c5:59:3c:b4:c6:ec:37:5f:9e:0c:16:59:3f:
+                ed:ad:d2:b1:ca:34:ea:b5:9b:89:3d:ed:60:61:53:
+                08:87:0f:62:c1:0e:f2:b5:ef:4c:f4:0a:e3:45:be:
+                53:fe:21:33:6b:98:fa:de:0e:f7:77:b8:2b:d6:af:
+                82:7b:b1:b0:b8:95:25:bf:6d:ab:f5:c4:5a:a4:cd:
+                58:38:13:44:b2:1b:17:e2:e1:87:74:2b:93:b9:7a:
+                2c:43:63:df:27:69:1d:1f:f3:08:b9:97:c9:60:dd:
+                be:f3:5f:45:2c:4e:d7:8b:28:cd:a2:65:f2:7e:66:
+                bb:d0:4a:cb:c2:05:d5:01:3d:ab:12:37:bf:e4:16:
+                d0:52:46:8a:87:92:84:8b:bf:38:00:32:6f:ec:8b:
+                40:52:93:d5:ca:87:13:58:2d:59:1c:9f:45:ba:ce:
+                48:2d:c5:8f:01:d3:b3:8f:a0:92:30:3f:c7:53:73:
+                61:e8:dc:bc:b4:9a:64:64:8d:3a:45:27:14:46:3a:
+                45:4c:55:de:68:8b:ec:60:0e:ab:77:d4:7f:50:d5:
+                68:ea:96:1b:ad:e9:62:98:92:61:28:57:22:55:fd:
+                f1:9f:0b:f9:98:2a:5b:8e:0b:4a:2b:d8:da:19:eb:
+                88:2f:5d:3c:9d:fd:ef:89:ea:d5:ed:0a:cd:20:0f:
+                01:4f:10:87:7e:76:f5:0d:b9:c1:e1:51:09:b5:de:
+                75:bd:c9:8f:b4:7f:62:d4:43:53:ae:da:ae:88:bd:
+                40:e8:a5:45:7e:44:c7:35:b8:4d:d7:60:7f:41:a5:
+                be:98:67
+            Exponent: 65537 (0x10001)
+    X509v3 extensions:
+        X509v3 Basic Constraints: 
+            CA:FALSE
+        X509v3 Authority Key Identifier: 
+            B5:9B:69:D9:57:68:6A:E8:A7:06:98:48:A7:D6:31:E3:8B:60:8A:81
+        Authority Information Access: 
+            CA Issuers - URI:http://crt.harica.gr/HARICA-CodeSigning-Sub-R2.cer
+            OCSP - URI:http://ocsp.harica.gr
+        X509v3 Certificate Policies: 
+            Policy: 2.23.140.1.4.1
+            Policy: 0.4.0.2042.1.2
+            Policy: 1.3.6.1.4.1.26513.1.1.3.2.2
+              CPS: https://repo.harica.gr/documents/CPS
+        X509v3 Extended Key Usage: 
+            Code Signing
+        X509v3 CRL Distribution Points: 
+            Full Name:
+              URI:http://crl.harica.gr/HARICA-CodeSigning-Sub-R2.crl
+
+        X509v3 Subject Key Identifier: 
+            2E:1E:E3:66:67:FD:31:E6:E7:C9:0E:09:02:70:7E:13:75:74:8A:FA
+        X509v3 Key Usage: critical
+            Digital Signature
+Signature Algorithm: sha256WithRSAEncryption
+Signature Value:
+    8e:01:42:81:2c:ad:08:d6:15:eb:73:91:37:78:e2:b5:df:d2:
+    9e:c3:86:a2:48:fe:6a:9b:b0:7d:8e:e2:1f:54:5d:99:ae:aa:
+    98:21:43:33:9b:ec:f1:db:6c:45:39:7b:f9:7c:41:75:05:64:
+    22:9f:30:ca:2f:7a:c8:4d:c3:21:38:de:25:ad:9e:15:b7:3c:
+    12:00:6b:3c:f6:6d:fb:9d:b9:b8:cb:62:f8:a7:34:81:50:7f:
+    72:e2:1f:f2:33:0b:d2:a3:2a:cf:ac:5b:5e:d3:54:93:0e:fd:
+    b6:cf:29:a8:9d:a5:56:fa:8f:8a:da:77:59:ce:63:a0:f2:9a:
+    1d:9b:5c:7c:86:47:46:08:78:81:d4:4a:bd:43:fe:40:6a:ca:
+    d7:35:55:a0:ac:6b:68:01:af:54:84:81:6a:6b:c5:54:d2:7c:
+    89:65:76:69:8a:89:f6:65:35:71:21:94:5a:4e:43:4b:ad:06:
+    5b:2e:d4:ea:d0:65:d2:7c:7c:45:a3:88:cd:62:15:95:d7:96:
+    54:5a:54:b1:3a:07:63:d8:9e:f2:8a:00:ba:92:0a:7c:92:72:
+    0d:e8:bd:8a:58:36:09:e0:ab:ce:20:d3:57:68:a1:48:7e:21:
+    32:d9:83:14:7d:5a:33:12:d2:13:ef:fd:1c:37:3f:93:21:4f:
+    d9:34:3c:d7:dc:76:06:3c:69:90:f6:e2:99:fb:8a:cb:7c:81:
+    e4:0a:88:35:3d:58:9c:eb:52:02:cd:07:0b:04:ae:b6:79:d2:
+    87:10:2d:10:4b:2e:a4:a5:42:6b:7f:16:92:09:54:29:e1:e0:
+    3f:95:d3:a0:c6:71:41:97:e1:ce:d5:b6:8f:58:73:7d:2f:6a:
+    45:39:fc:88:da:60:00:0c:c1:23:0f:f4:94:db:55:71:a0:42:
+    36:ae:30:8b:ea:e1:c1:48:dd:1b:c5:0b:e5:f6:80:6b:58:0d:
+    b4:db:bd:02:bd:b6:18:33:f6:26:6e:fb:4f:0f:1b:a4:8e:6a:
+    6e:b4:ab:59:b6:36:76:06:79:96:80:22:6d:28:fa:8d:4e:fa:
+    e1:33:76:59:1e:1e:a5:c3:2a:3e:a9:81:cb:67:52:ab:81:c3:
+    20:41:12:ce:2e:70:1b:54:6b:87:92:f0:89:94:83:ea:da:06:
+    bb:5e:ef:75:aa:2b:7b:7a:70:7d:8c:67:37:d4:07:1c:2b:66:
+    2c:ce:ef:5d:4d:11:96:a7:3a:99:40:73:bb:13:84:5f:e0:6a:
+    42:f5:da:aa:5e:e2:e5:09:41:22:03:59:ec:c3:18:e7:bf:72:
+    ca:d2:fb:44:d3:2c:52:2d:e7:89:e0:57:07:f2:80:b3:03:82:
+    b1:ea:11:ff:0f:ac:e4:1c
+</code></pre></div>
+<p>You can also <a href="https://crt.sh/?q=ce9678d4c53d750e601eab5e79161375b0ea1e727f956187c85f4dc357a594e6">view the certificate on crt.sh</a>.</p>
+<p>Code signing certs normally don't show up on these websites because — unlike server certificates —
+SCTs aren't required for these certs to work,
+so CAs don't upload them to certificate transparency logs;
+and CT logs is where these sites gather the certificates from.</p>
+<p>But I uploaded the cert to a couple CT logs myself, just for fun :)</p>
+</details>
+<h2 id="signing-code">Signing Code</h2>
+<p>To sign code you need a program that can compute the right hash, generate a signature, and attach them to the program.</p>
+<p>On Windows there's <code>signtool.exe</code> or <code>Set-AuthenticodeSignature</code>,
+which supports all the common Windows program formats like .EXE, .DLL, .MSI, and .PS1.</p>
+<p>However, I want to sign Windows programs on my Linux desktop,
+since Linux is what familiar with and that's also where I'm plugging the hardware token into..</p>
+<p>There's this great project called <a href="https://github.com/mtrojnar/osslsigncode"><code>osslsigncode</code></a> which runs on various operating systems
+and let's you sign Windows programs.
+This is what I've used to sign all programs so far.</p>
+<p><code>osslsigncode</code> isn't available in my OS' package manager, but it's a very easy project to compile yourself.</p>
+<details>
+<summary>osslsigncode Compilation Steps</summary>
+<p><code>osslsigncode</code> compiles cleanly without any intervention, but I decided to tweak some build options.</p>
+<p>Since it's a C project but performance isn't really important here,
+I enabled sanitizers and did a debug build to start out with.</p>
+<p>Besides that, it's just a couple standard CMake commands to compile, test, and install the project.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Clone the repository</span>
+$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/mtrojnar/osslsigncode.git
+
+<span class="c1"># Configure the build</span>
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>osslsigncode
+$<span class="w"> </span><span class="nv">CC</span><span class="o">=</span>clang<span class="w"> </span><span class="nv">CXX</span><span class="o">=</span>clang++<span class="w"> </span>cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build<span class="w"> </span>-G<span class="w"> </span>Ninja<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Debug<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-DCMAKE_C_FLAGS<span class="o">=</span><span class="s2">"-fsanitize=undefined -fsanitize-minimal-runtime -fno-omit-frame-pointer -fno-sanitize-merge -fno-sanitize-recover=all"</span>
+
+<span class="c1"># Build, test, and install the program</span>
+$<span class="w"> </span>cmake<span class="w"> </span>--build<span class="w"> </span>build
+
+<span class="w">    </span>..<span class="w"> </span>Build<span class="w"> </span>output<span class="w"> </span>..
+
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>build
+$<span class="w"> </span>ctest
+
+<span class="w">    </span>..<span class="w"> </span>Tests<span class="w"> </span>should<span class="w"> </span>all<span class="w"> </span>succeed<span class="w"> </span>..
+
+$<span class="w"> </span>sudo<span class="w"> </span>cmake<span class="w"> </span>--install<span class="w"> </span>.
+
+<span class="w">    </span>..<span class="w"> </span>Installs<span class="w"> </span>into<span class="w"> </span>/usr/local/bin<span class="w"> </span>..
+</code></pre></div>
+</details>
+<h3 id="pkcs-11">PKCS #11</h3>
+<p>You can use <code>osslsigncode</code> to easily sign programs using a self-signed certificate,
+but what if you want to create signatures with the proper, publicly trusted certificate where the private key is stuck on a hardware token?</p>
+<p>This involves using a PKCS #11 module which knows how to pass cryptographic operations to the token.
+<code>osslsigncode</code> can use these modules for its signing operations; so that's great, but where do I get a module that's compatible with my token?</p>
+<p>The software HARICA provided includes a module that should work, but:</p>
+<ul>
+<li>It's not compiled/supported for my flavour of Linux.<ul>
+<li>It would probably work if I copy it out of the Ubuntu VM,
+  but this feels fragile so I really don't like the idea of relying on this.</li>
+</ul>
+</li>
+<li>I prefer to use my operating system's package manager or compile something myself.</li>
+</ul>
+<p>Thankfully, OpenSC — an open source smart card interfacing project —
+includes a PKCS #11 module that works with many hardware tokens including the one I have.</p>
+<h3 id="discovering-the-objects-on-the-token">Discovering the objects on the token</h3>
+<p>Objects on the token can be located via a PKCS #11 URI, which gives you a standard way to tell programs what objects to use for their operations.</p>
+<p>To list objects on the token, you can use <code>pkcs11-tool</code> or <code>p11tool</code>.
+In my case, <code>p11tool</code> generated URIs that worked better, since it properly percent encoded special characters like <code>ö</code>.</p>
+<p>The following command lists all URIs of the tokens on my machine:</p>
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>p11tool<span class="w"> </span>--provider<span class="w"> </span>/usr/lib/opensc-pkcs11.so<span class="w"> </span>--list-tokens
+</code></pre></div>
+<p>Now, knowing the token URI, I was able to list its objects:</p>
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>p11tool<span class="w"> </span>--login<span class="w"> </span>--provider<span class="w"> </span>/usr/lib/opensc-pkcs11.so<span class="w"> </span>--list-all<span class="w"> </span><span class="s1">'[token uri here]'</span>
+</code></pre></div>
+<p>It lists a lot of stuff.
+I had to use the first certificate and private key on the list.</p>
+<h3 id="signing">Signing</h3>
+<p>These are the commands I used to create self-signed and then properly signed programs.</p>
+<details>
+<summary>osslsigncode self-signed</summary>
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>osslsigncode<span class="w"> </span>sign<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-certs<span class="w"> </span>self.cert<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-key<span class="w"> </span>self.key<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-ts<span class="w"> </span>http://ts.harica.gr<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-n<span class="w"> </span><span class="s2">"Noita Process Dumper"</span><span class="w"> </span>-i<span class="w"> </span><span class="s2">"https://github.com/dextercd/Noita-Minidump"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-in<span class="w"> </span>noita_dumper.exe<span class="w"> </span>-out<span class="w"> </span>noita_dumper-self-signed.exe
+</code></pre></div>
+</details>
+<details>
+<summary>osslsigncode properly signed</summary>
+<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>osslsigncode<span class="w"> </span>sign<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-login<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-provider<span class="w"> </span>/usr/lib/ossl-modules/pkcs11prov.so<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-pkcs11module<span class="w"> </span>/usr/lib/opensc-pkcs11.so<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-pkcs11cert<span class="w"> </span><span class="s1">'pkcs11:model=PKCS%2315%20emulated;manufacturer=Gemalto;serial=6580029647482a7a;token=Dexter%20Castor%20D%C3%B6pping;id=%00%01;object=Certificate%201;type=cert'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-key<span class="w"> </span><span class="s1">'pkcs11:model=PKCS%2315%20emulated;manufacturer=Gemalto;serial=6580029647482a7a;token=Dexter%20Castor%20D%C3%B6pping;id=%00%01;object=Private%20key%201;type=private'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-ts<span class="w"> </span>http://ts.harica.gr<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-n<span class="w"> </span><span class="s2">"Noita Process Dumper"</span><span class="w"> </span>-i<span class="w"> </span><span class="s2">"https://github.com/dextercd/Noita-Minidump"</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-in<span class="w"> </span>noita_dumper.exe<span class="w"> </span>-out<span class="w"> </span>noita_dumper-signed.exe
+</code></pre></div>
+</details>
+<p>The timestamping server passed in with the <code>-ts</code> argument is important, as it keeps the signature valid beyond the lifetime of the code signing certificate.
+<code>osslsigncode</code> uses the TS server to attach proof that the signature was created before the certificate expired.</p>
+<p><img alt="Screenshot of the signature information on one of my programs. It shows that noita_dear_imgui.dll was signed on the 24th of August 2025 with a certificate issued by HARICA to Dexter. There's a counter signature on it from DigiCert's timestamping server." class="full-image" src="/static/img/explorer_signature.png"/></p>
+<h2 id="using-the-hardware-token-in-github-actions">Using the Hardware Token in GitHub Actions</h2>
+<p>As mentioned before, a code signing service would be handy for signing code in CI environments;
+I create releases using GitHub Actions and would like to sign those.
+How can I do that when the hardware token is plugged into my PC but the builds are performed by GitHub on the other side of the world?</p>
+<p>Well, one option would be to host a GitHub Actions runner myself.
+That's a fine solution, but, for me, it kind of defeats the point of GitHub Actions.
+I want to build my code on a standard environment without needing to do a bunch of setup and maintenance work.</p>
+<p>An alternative would be to create my own code signing service.
+I could have a basic HTTP server which accepts the file, invokes <code>osslsigncode</code>, and returns the signed program to the GitHub Actions job.</p>
+<p>A minimal solution would only be around twenty lines of code, but, with good reasons, you probably want make things more complicated;
+you may want any or all of the following features:</p>
+<ul>
+<li>Proper authentication and authorisation</li>
+<li>Logging</li>
+<li>Test signing</li>
+<li>Antivirus scanning</li>
+<li>VirusTotal analysis</li>
+<li>Integration with build systems like CMake</li>
+</ul>
+<p>So that's what I did,
+but this blog post is too long already; I'll write more about the code signing server project <em>later</em> :).</p>
+</article>
+
+
+
+</main>
+
+<footer class="py-3 my-4">
+  <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+    <li class="nav-item"><a href="/index.html" class="nav-link px-2 text-muted">Home</a></li>
+    <li class="nav-item"><a href="/about.html" class="nav-link px-2 text-muted">About</a></li>
+  </ul>
+  <p class="text-center text-muted">Dexter Castor Döpping</p>
+</footer>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
