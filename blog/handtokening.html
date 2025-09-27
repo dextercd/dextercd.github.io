@@ -1,0 +1,247 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Handtokening Code Signing Server | DD</title>
+
+<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+<link href="/static/css/code-highlight.css" rel="stylesheet">
+<link href="/static/css/dexsite.css" rel="stylesheet">
+
+
+
+<meta name="description" content="Exploration Handtokening, my self-hosted Authenticode code signing service.">
+<meta name="author" content="Dexter Castor Döpping">
+<meta name="keywords" content="Certificates, Code, Python">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/index.html">DD</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbar-main">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/index.html">Home</a>
+        <li class="nav-item"><a class="nav-link" href="/about.html">About</a>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container mt-2">
+
+
+
+<article class="blog-post" lang="en">
+<h1>Handtokening Code Signing Server</h1>
+<div class="post-info" lang="en">
+    <span class="post-info-item"><strong>By</strong>: Dexter Castor Döpping</span>
+    <span class="post-info-item"><strong>Published</strong>: tbd</span>
+</div>
+
+<p>You <a href="code-signing.html">acquired a code signing certificate</a> with a hardware token;
+you've signed a couple .EXEs and .DLLs, but now you want to sign code remotely,
+for example, as part of CI builds in GitHub Actions or GitLab CI.
+What to do?</p>
+<p>Well, you need a networked service that accepts programs and signs them with your token.</p>
+<p>There are some options out there,
+but they're expensive, the free options have unacceptable limitations,
+and some don't run on your operating system.</p>
+<p>To be fair, it's unusual to want to sign Windows program while using Linux,
+but that's the situation I found myself in, so I ended up building my own solution.</p>
+<h2 id="goals">Goals</h2>
+<p>I want my solution to be simple, run on Linux, and help me follow code-signing best practices, including:</p>
+<ul>
+<li>Test signing</li>
+<li>Logging</li>
+<li>Virus scans (ClamAV and optionally VirusTotal)<ul>
+<li>To protect against malicious code that made its way into the program,</li>
+<li>and for discovering AV false positives early.</li>
+</ul>
+</li>
+<li>PIN entry for production signatures (PIN is not stored).</li>
+</ul>
+<h2 id="result">Result</h2>
+<p>I ended up with a self-hosted HTTP API that invokes the <a href="https://github.com/mtrojnar/osslsigncode"><code>osslsigncode</code></a> program.</p>
+<p>The name of the code signing server is <strong>Handtokening</strong>.
+It's a portmanteau of handtekening — which means signature in Dutch — and (hardware) token,
+which is where the private keys of code signing certificates are often stored.</p>
+<p>It uses several technologies that I'm excited about:</p>
+<ul>
+<li>Python + Django with Gunicorn as the WSGI server: well known and reliable.</li>
+<li>systemd: pretty much unavoidable on Linux. Socket activation and its built-in security hardening options are great.</li>
+<li>SQLite: a great database option, especially for low traffic site like this.</li>
+<li>Ansible: To reliably set up the application in a secure manner.</li>
+</ul>
+<h2 id="data-model">Data Model</h2>
+<p>Handtokening's data model is fairly simple.
+There are a handful of tables related to configuration, authentication, and logging.</p>
+<h3 id="signing-profiles">Signing Profiles</h3>
+<p>Everything is centered around the "Signing Profile".
+Among other things, it describes the certificates that can be used,
+what timestamping servers are available,
+and which clients have access to the profile.</p>
+<p><img alt="" class="full-image" src="/static/img/signing-profile-admin.png"/></p>
+<p>Usually you'll have two profiles, each with their own certificate:</p>
+<ul>
+<li>A test signing profile that's constantly used in development builds.<ul>
+<li>This makes your dev builds more representative of the production ones,
+  without unnecessarily exposing your production certificate to prerelease code that may have
+  vulnerabilities, unaudited dependencies, bugs, or other quality issues.</li>
+<li>A test signing certificate isn't stored on a hardware token meaning you don't have to enter a PIN to sign things.</li>
+</ul>
+</li>
+<li>A production profile that's used for official releases.<ul>
+<li>Access to this profile is much more restricted.</li>
+<li>A PIN-code must be entered for every file you sign.</li>
+</ul>
+</li>
+</ul>
+<h3 id="clients">Clients</h3>
+<p>Clients are used to grant access to signing profiles.
+Authentication is handled using randomly generated secrets with 160 bits of entropy.
+The lifetime of these secrets is configurable.</p>
+<p>I have one client for non-production builds that only has access to the test signing profile.
+Secrets generated for this client will expire long after civilisation has ended (900+ days).</p>
+<p>For production builds, each project has its own client with access granted to the production profile.
+The secrets for these clients are valid for only a short amount of time: one to four hours depending on the project.</p>
+<h3 id="signing-logs">Signing Logs</h3>
+<p>It's important to track what you've signed.
+If your code signing certificate is abused somehow,
+you want as much information as possible to evaluate the impact and investigate how it could've happened.</p>
+<p>This is what the signing logs table is for.
+Every signing operation results in a new entry.</p>
+<p><img alt="" class="full-image" src="/static/img/signing-logs-listing.png"/></p>
+<p>The log contains many attributes:</p>
+<ul>
+<li>When the operation started and ended</li>
+<li>Which client requested the signature</li>
+<li>The IP address and user agent header of the client</li>
+<li>The selected signing profile</li>
+<li>What certificate was used</li>
+<li>Hashes of the program before and after signing</li>
+<li>Where the files are stored on the signing server</li>
+<li>VirusTotal analysis results</li>
+<li>Whether the signing operation succeeded</li>
+</ul>
+<p>Here's what the detail view looks like, with some fields removed and condensed:</p>
+<p><img alt="" class="full-image" src="/static/img/signing-log-detail.png"/></p>
+<h2 id="api">API</h2>
+<p>The signing API is very simple. A file is <code>POST</code>-ed to <code>/api/sign</code>
+along with the client credentials using basic auth and some additional info via query parameters.</p>
+<p>You can easily invoke the API with <code>curl</code>:</p>
+<div class="codehilite"><pre><span></span><code>curl<span class="w"> </span>http://localhost/api/sign<span class="w">                                          </span><span class="se">\</span>
+<span class="w">    </span>--max-time<span class="w"> </span><span class="m">300</span><span class="w">                                                      </span><span class="se">\</span>
+<span class="w">    </span>--user<span class="w"> </span><span class="s2">"</span><span class="nv">$HT_USER</span><span class="s2">:</span><span class="nv">$HT_SECRET</span><span class="s2">"</span><span class="w">                                        </span><span class="se">\</span>
+<span class="w">    </span>--header<span class="w"> </span><span class="s1">'Content-Disposition: attachment; filename="minidump.dll"'</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--url-query<span class="w"> </span><span class="nv">description</span><span class="o">=</span><span class="s2">"Noita Crash Dumper"</span><span class="w">                        </span><span class="se">\</span>
+<span class="w">    </span>--url-query<span class="w"> </span><span class="nv">url</span><span class="o">=</span><span class="s2">"https://github.com/dextercd/Noita-Minidump"</span><span class="w">        </span><span class="se">\</span>
+<span class="w">    </span>--url-query<span class="w"> </span>signing-profile<span class="o">=</span><span class="s2">"test-signing"</span><span class="w">                          </span><span class="se">\</span>
+<span class="w">    </span>--data-binary<span class="w"> </span>@minidump.dll<span class="w">                                         </span><span class="se">\</span>
+<span class="w">    </span>--output<span class="w"> </span><span class="s2">"minidump-signed.dll"</span>
+</code></pre></div>
+<p>Using curl's <code>@</code> syntax, the contents of minidump.dll is sent to Handtokening.
+If everything goes well, it responds with a signed program that's saved to minidump-signed.dll.</p>
+<p>The request blocks until the signing operation is complete,
+so the client and server need to be prepared for that,
+i.e., large timeout values must be configured on the client and server.
+That's one complication in an otherwise simple interface.</p>
+<p>Microsoft's Authenticode signing system is based around PKCS #7 files.
+Instead of responding with the signed program,
+it's possible to make Handtokening respond with a PKCS #7 file using <code>--url-query response-type=pkcs7</code>.
+The resulting file can be attached to the submitted program to make it signed.</p>
+<p>This means the entire signed program doesn't have to be transferred back to the client,
+which saves you the time it takes to transfer hunderds or even thousands of megabytes.</p>
+<p>When a program is submitted, Handtokening does the following:</p>
+<ul>
+<li>Authenticates the request</li>
+<li>Checks if the client has access to the signing profile</li>
+<li>Picks a valid certificate in the profile</li>
+<li>Stores the incoming file</li>
+<li>Scans it with ClamAV and optionally VirusTotal</li>
+<li>Waits to receive a PIN-code if applicable</li>
+<li>Signs the program using <code>osslsigncode</code> and returns the result</li>
+<li>Keeps a log of how it all went</li>
+</ul>
+<h2 id="cmake">CMake</h2>
+<p>I'm using CMake for all the projects I want to sign,
+so I wrote a module for this that hooks into CMake's packaging step.</p>
+<p>Here's how the module is used; just before <code>include(CPack)</code> add:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">FetchContent_Declare</span><span class="p">(</span>
+<span class="w">    </span><span class="s">Handtokening_CMake</span>
+<span class="w">    </span><span class="s">GIT_REPOSITORY</span><span class="w"> </span><span class="s">https://github.com/dextercd/Handtokening-CMake.git</span>
+<span class="w">    </span><span class="s">GIT_TAG</span><span class="w"> </span><span class="s">[Version</span><span class="w"> </span><span class="s">hash</span><span class="w"> </span><span class="s">here]</span>
+<span class="p">)</span>
+<span class="nb">FetchContent_MakeAvailable</span><span class="p">(</span><span class="s">Handtokening_CMake</span><span class="p">)</span>
+
+<span class="nb">set</span><span class="p">(</span><span class="s">HT_SIGN_PATTERNS</span>
+<span class="w">    </span><span class="s2">"Debug/noita_dear_imgui\\.dll$"</span><span class="w"> </span><span class="s2">"description=Noita Dear ImGui module (Debug Build)"</span>
+<span class="w">    </span><span class="s2">"noita_dear_imgui\\.dll$"</span><span class="w">       </span><span class="s2">"description=Noita Dear ImGui module"</span>
+<span class="w">    </span><span class="s2">"native_test\\.dll$"</span><span class="w">            </span><span class="s2">"description=Noita Dear ImGui example native mod module"</span>
+<span class="p">)</span>
+<span class="nb">include</span><span class="p">(</span><span class="s">Handtokening</span><span class="p">)</span>
+</code></pre></div>
+<p>The <code>HT_SIGN_PATTERNS</code> variable defines what you want to sign.
+You can provide <code>description</code> and <code>url</code> attributes after a pattern which will then be included in the Authenticode signature data.</p>
+<p>The module requires the following cache variables before it attempts to sign programs:</p>
+<ul>
+<li><code>HT_ENDPOINT</code>: URL to submit signing requests to. This normally ends in /api/sign.</li>
+<li><code>HT_USER</code>: Client name to authenticate as.</li>
+<li><code>HT_SECRET</code>: API authentication secret.</li>
+<li><code>HT_SIGNING_PROFILE</code>: What signing profile to use.</li>
+</ul>
+<p>It's expected that these are defined outside the code base as part of the CI setup.</p>
+<p>The module checks if <code>osslsigncode</code> or <code>signtool.exe</code> is available locally.
+If one's available, and it's a new enough version, it'll request a PKCS #7 response from Handtokening and attach it to the program, instead of downloading the full signed program from Handtokening.</p>
+<h2 id="installation">Installation</h2>
+<p>Ansible is used to perform the installation steps:</p>
+<ul>
+<li>Making a dedicated user to run the service under.</li>
+<li>Creating the virtualenv where the code and its dependencies are installed.</li>
+<li>Setting up the systemd service with socket activation.</li>
+<li>Adding a polkit rule so the service can access hardware tokens via pcscd.</li>
+<li>Writing the configuration files.</li>
+<li>Everything's set up with proper file permissions, so secrets are only readable by the dedicated service user.</li>
+</ul>
+<h2 id="systemd">systemd</h2>
+<p>systemd contains numerous settings that you can use to remove privileges from a service.
+<code>systemd-analyze security [service name]</code> lists these options along with an "exposure" rating, letting you prioritise the most important ones.
+I ended up enabling most suggested security options.</p>
+<p><img alt="" class="full-image" src="/static/img/ht-systemd-hardening.png"/></p>
+<p>I'm not signing code every day.
+systemd's socket activation feature means that the server is not running until I begin using it,
+at which point it's started automatically.</p>
+<h2 id="fin">Fin?</h2>
+<p>That's about it. The code is available on <a href="https://github.com/dextercd/Handtokening">GitHub dextercd/Handtokening</a>.
+Give it a try if it seems useful to you.</p>
+<p>Feel free to open an issue if you run into problems or have questions.</p>
+<p>Currently the service only supports Authenticode via <code>osslsigncode</code>.
+In the future I may add other signing options,
+although I personally don't have much of a need for this at the moment.</p>
+</article>
+
+
+
+</main>
+
+<footer class="py-3 my-4">
+  <ul class="nav justify-content-center border-bottom pb-3 mb-3">
+    <li class="nav-item"><a href="/index.html" class="nav-link px-2 text-muted">Home</a></li>
+    <li class="nav-item"><a href="/about.html" class="nav-link px-2 text-muted">About</a></li>
+  </ul>
+  <p class="text-center text-muted">Dexter Castor Döpping</p>
+</footer>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
