@@ -1,11 +1,14 @@
 html {
-    font-size: 18px;
 }
 
 body {
     height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+.navbar {
+    margin-bottom: 1rem;
 }
 
 main {
@@ -37,6 +40,17 @@ main {
         height: auto;
         max-height: none;
     }
+}
+
+.blog-post table {
+    table-layout: fixed;
+    border-collapse: collapse;
+
+    th, td {
+        padding: 0.1em 0.8em;
+    }
+
+    margin-bottom: 1rem;
 }
 
 .post-info {
